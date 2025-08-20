@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import generateIcon from './Components_assets/generate.svg';
+import generateIcon from './Components_assets/Generate.svg';
 
 const defaultSimpleFormData = {
   subject: 'Mathematics',
