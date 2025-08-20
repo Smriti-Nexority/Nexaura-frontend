@@ -264,21 +264,7 @@ const QuestionBar = ({ formData, trigger }) => {
             // Final fallback
             if (!parseSuccess) {
               console.log('All parsing strategies failed, using fallback');
-              parsedQuestions = [{
-                QuestionStem: 'API Response Processing Error',
-                Options: {
-                  A: 'The API response format is not supported',
-                  B: 'Multiple parsing strategies failed',
-                  C: 'Please contact support with the debug information',
-                  D: 'Try refreshing and generating questions again'
-                },
-                CorrectAnswer: 'C',
-                Feedback: {
-                  Correct: 'This is a fallback question due to parsing errors.',
-                  Hint: 'Check the debug information below for details.',
-                  Incorrect: 'The actual API response could not be parsed.'
-                }
-              }];
+              parsedQuestions = [questionsString];
               scenarioText = 'Parsing Error - Unable to extract scenario from API response, Enter the Base content and button to generate questions';
             }
           } else if (Array.isArray(questionsString)) {
@@ -450,7 +436,7 @@ const QuestionBar = ({ formData, trigger }) => {
             {/* Display Scenario if available */}
             {scenario && (
               <div className="p-4 bg-[#2A2A2A] rounded-md border-l-4 border-blue-400 mb-6">
-                <h3 className="text-xl font-bold text-blue-300 mb-2">📖 Scenario</h3>
+                
                 <p className="text-gray-200 leading-relaxed">{scenario}</p>
               </div>
             )}
