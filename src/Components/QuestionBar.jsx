@@ -255,7 +255,7 @@ const QuestionBar = ({ formData, trigger }) => {
               
               if (tempQuestions.length > 0) {
                 parsedQuestions = tempQuestions;
-                scenarioText = 'Scenario extracted from text parsing';
+                scenarioText = 'Enter the Assessment Form again';
                 parseSuccess = true;
                 console.log('Line-by-line parsing successful');
               }
