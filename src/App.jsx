@@ -7,7 +7,7 @@ const App = () => {
   const [formData, setFormData] = useState({
     subject: 'Mathematics',
     topic: '',
-    tags: [''],
+    tags: ['triangle'],
     question_type: 'multiple-choice',
     questionType: 'multiple-choice',
     max_question: 6,
@@ -76,7 +76,7 @@ const App = () => {
 
         const defaultParams = {
           subject: 'Mathematics',
-          tags: [''],
+          tags: ['triangle'],
           topic: '',
           question_type: simpleQuestionType,
           questionType: simpleQuestionType,
@@ -123,7 +123,7 @@ const App = () => {
       subject: category === 'scenario-based' ? 'Animal Nutrition' : 'Mathematics',
       Focus_Area: category === 'scenario-based' ? 'Animal Nutrition' : '',
       topic: category === 'scenario-based' ? 'Animal Nutrition' : '',
-      tags: category === 'scenario-based' ? ['Animal Nutrition'] : [''],
+      tags: category === 'scenario-based' ? ['Animal Nutrition'] : ['triangle'],
       difficulty_level: category === 'scenario-based' ? 'Hard' : 'Medium',
       difficulty: category === 'scenario-based' ? { hard: true, easy: false, medium: false } : { easy: false, medium: true, hard: false },
       learning_objective: category === 'scenario-based' ? 'Understand nutritional requirements in clinical scenarios' : 'Hands on practice',

@@ -3,7 +3,7 @@ import generateIcon from './Components_assets/Generate.svg';
 
 const defaultSimpleFormData = {
   subject: 'Mathematics',
-  tags: [''],
+  tags: ['triangle'],
   questionType: 'multiple-choice',
   question_type: 'multiple-choice',
   numQuestions: 6,
