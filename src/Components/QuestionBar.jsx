@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import generateIcon from './Components_assets/generate.svg';
+import generateIcon from './Components_assets/Generate.svg';
 
 const QuestionBar = ({ formData, trigger }) => {
   const [questions, setQuestions] = useState([]);
