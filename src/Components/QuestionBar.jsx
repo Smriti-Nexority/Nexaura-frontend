@@ -339,8 +339,7 @@ const QuestionBar = ({ formData, trigger }) => {
                 CorrectAnswer: 'N/A',
                 Explanation: 'The API response could not be parsed properly.'
               }];
-              scenarioText = `Parsing Error - Unable to extract questions from API response.
-                Debug: Environment=${import.meta.env.DEV ? 'dev' : 'prod'}, API=${apiUrl}
+              scenarioText = `Parsing Error - Unable to extract questions from API 
                 Try regenerating questions or check API configuration.`;
             }
 
