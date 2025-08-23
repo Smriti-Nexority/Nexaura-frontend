@@ -27,11 +27,24 @@ const QuestionBar = ({ formData, trigger }) => {
       setQuestions([]);
       setScenario('');
       setDebugInfo('');
-
+      
       const isCaseBased = formData.Scenarios !== undefined || formData.Question_Style === 'Case-based MCQ';
+      
+      // ✅ Using Vite's built-in environment detection
       const apiUrl = isCaseBased
-        ? '/api'
+        ? (import.meta.env.DEV 
+            ? '/api'  // Uses proxy in development
+            : 'https://x3sjgoquc2.execute-api.ap-south-1.amazonaws.com/dev'  // Direct call in production
+          )
         : 'https://fypc6y8q41.execute-api.ap-south-1.amazonaws.com/dev';
+
+      // Enhanced logging for debugging
+      console.log('🔍 Environment Details:');
+      console.log('- Development mode:', import.meta.env.DEV);
+      console.log('- Production mode:', import.meta.env.PROD);
+      console.log('- Mode:', import.meta.env.MODE);
+      console.log('- Is case-based:', isCaseBased);
+      console.log('- Selected API URL:', apiUrl);
 
       const normalizedPayload = {
         ...formData,
@@ -55,46 +68,103 @@ const QuestionBar = ({ formData, trigger }) => {
         learning_objective: formData.learning_objective || formData.description || 'Hands on practice',
       };
 
-      console.log('Normalized payload:', JSON.stringify(normalizedPayload, null, 2));
+      console.log('Sending payload:', JSON.stringify(normalizedPayload, null, 2));
 
       for (let i = 0; i < retries; i++) {
         try {
           const response = await axios.post(apiUrl, normalizedPayload, {
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              // Add Origin header for CORS in production
+              ...(!import.meta.env.DEV && { 'Origin': window.location.origin })
+            },
             signal: controller.signal,
             timeout: 60000,
           });
 
           if (!isMounted) return;
 
-          console.log('Raw API response:', response.data);
+          console.log('Raw API response received:');
+          console.log('- Status:', response.status);
+          console.log('- Headers:', response.headers);
+          console.log('- Data type:', typeof response.data);
+          console.log('- Data content:', response.data);
 
-          if (!response.data || typeof response.data.body !== 'string') {
-            throw new Error('Invalid API response structure: missing or non-string body.');
-          }
-
+          // ✅ Enhanced response validation for different API response formats
+          let responseData = response.data;
           let body;
-          try {
-            body = JSON.parse(response.data.body);
-          } catch {
-            throw new Error('Failed to parse response body JSON.');
+
+          // Check if response is HTML (indicates routing/proxy issue)
+          if (typeof responseData === 'string' && responseData.includes('<!DOCTYPE html>')) {
+            throw new Error(`Received HTML response instead of JSON. This indicates a routing/proxy issue. 
+              Possible causes:
+              1. API endpoint not found (404)
+              2. CORS issues in production
+              3. Nginx/server misconfiguration
+              4. API Gateway not properly configured
+              
+              Debug info: Environment=${import.meta.env.DEV ? 'dev' : 'prod'}, URL=${apiUrl}`);
           }
 
-          if (body.error) {
-            throw new Error(`API returned an error: ${body.error}`);
+          // Handle different response structures
+          if (!responseData) {
+            throw new Error('Empty response received from API');
           }
 
-          // Get the raw questions string
-          let questionsString = body.questions || body.Questions;
+          // Case 1: AWS API Gateway response with body property (typical Lambda response)
+          if (responseData.body && typeof responseData.body === 'string') {
+            try {
+              body = JSON.parse(responseData.body);
+              console.log('Parsed AWS Lambda response body');
+            } catch (parseError) {
+              throw new Error(`Failed to parse AWS Lambda response body JSON: ${parseError.message}`);
+            }
+          }
+          // Case 2: Direct API response (object)
+          else if (typeof responseData === 'object') {
+            body = responseData;
+            console.log('Using direct API response object');
+          }
+          // Case 3: String response that needs parsing
+          else if (typeof responseData === 'string') {
+            try {
+              body = JSON.parse(responseData);
+              console.log('Parsed string response');
+            } catch (parseError) {
+              throw new Error(`Failed to parse string response as JSON: ${parseError.message}`);
+            }
+          }
+          else {
+            throw new Error(`Unexpected response format: ${typeof responseData}`);
+          }
+
+          // Check for API-level errors
+          if (body.error || body.errorMessage || body.message?.includes('error')) {
+            throw new Error(`API returned an error: ${body.error || body.errorMessage || body.message}`);
+          }
+
+          // Get the questions data
+          let questionsString = body.questions || body.Questions || body.data?.questions;
           let scenarioText = '';
           let parsedQuestions = [];
 
-          console.log('Raw questions string:', questionsString);
-          console.log('Questions string type:', typeof questionsString);
-          console.log('Questions string length:', questionsString?.length);
+          console.log('Questions extraction:');
+          console.log('- Type:', typeof questionsString);
+          console.log('- Length:', questionsString?.length);
+          console.log('- First 500 chars:', questionsString?.substring(0, 500) || 'N/A');
 
-          // Store debug info
-          setDebugInfo(`Type: ${typeof questionsString}, Length: ${questionsString?.length || 0}, First 500 chars: ${questionsString?.substring(0, 500) || 'N/A'}`);
+          // Store enhanced debug info
+          setDebugInfo(`
+             Debug Information:
+            - Environment: ${import.meta.env.DEV ? 'Development' : 'Production'}
+            - Mode: ${import.meta.env.MODE}
+            - API URL: ${apiUrl}
+            - Response Type: ${typeof responseData}
+            - Questions Type: ${typeof questionsString}
+            - Questions Length: ${questionsString?.length || 0}
+            - Timestamp: ${new Date().toISOString()}
+          `);
 
           if (typeof questionsString === 'string') {
             // Enhanced cleaning with step-by-step logging
@@ -152,7 +222,6 @@ const QuestionBar = ({ formData, trigger }) => {
             if (!parseSuccess) {
               try {
                 console.log('Attempting JSON extraction...');
-                // Look for the main JSON object
                 const jsonMatch = cleanedString.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
                   const extractedJson = jsonMatch[0];
@@ -227,7 +296,7 @@ const QuestionBar = ({ formData, trigger }) => {
               }
             }
 
-            // Strategy 4: Line-by-line text parsing
+            // Strategy 4: Line-by-line text parsing (fallback)
             if (!parseSuccess) {
               console.log('Attempting line-by-line text parsing...');
               const lines = cleanedString.split(/[\n\r]+/);
@@ -255,7 +324,7 @@ const QuestionBar = ({ formData, trigger }) => {
               
               if (tempQuestions.length > 0) {
                 parsedQuestions = tempQuestions;
-                scenarioText = 'Enter the Assessment Form again';
+                scenarioText = 'Questions were extracted from malformed text. Please regenerate for better quality.';
                 parseSuccess = true;
                 console.log('Line-by-line parsing successful');
               }
@@ -263,18 +332,29 @@ const QuestionBar = ({ formData, trigger }) => {
 
             // Final fallback
             if (!parseSuccess) {
-              console.log('All parsing strategies failed, using fallback');
-              parsedQuestions = [questionsString];
-              scenarioText = 'Parsing Error - Unable to extract scenario from API response, Enter the Base content and button to generate questions';
+              console.log('All parsing strategies failed, using final fallback');
+              parsedQuestions = [{ 
+                QuestionStem: 'Parsing Error', 
+                Options: ['Please regenerate questions'], 
+                CorrectAnswer: 'N/A',
+                Explanation: 'The API response could not be parsed properly.'
+              }];
+              scenarioText = `Parsing Error - Unable to extract questions from API response.
+                Debug: Environment=${import.meta.env.DEV ? 'dev' : 'prod'}, API=${apiUrl}
+                Try regenerating questions or check API configuration.`;
             }
+
           } else if (Array.isArray(questionsString)) {
             parsedQuestions = questionsString;
+            console.log('Using array of questions directly');
           } else if (questionsString && typeof questionsString === 'object') {
             if (questionsString.Scenario && questionsString.Questions) {
               scenarioText = questionsString.Scenario;
               parsedQuestions = questionsString.Questions;
+              console.log('Using object with Scenario and Questions');
             } else {
               parsedQuestions = [questionsString];
+              console.log('Using single question object');
             }
           }
 
@@ -298,7 +378,7 @@ const QuestionBar = ({ formData, trigger }) => {
 
           setScenario(scenarioText);
           setQuestions(updatedQuestions);
-          console.log('Successfully processed questions:', updatedQuestions);
+          console.log('🎉 Successfully processed questions:', updatedQuestions.length);
           setLoading(false);
           return;
 
@@ -312,11 +392,48 @@ const QuestionBar = ({ formData, trigger }) => {
           }
 
           console.error(`Attempt ${i + 1} failed:`, err);
+
+          // Enhanced error messages with specific guidance
+          let errorMessage = err.message;
+          let debugDetails = '';
+
+          if (err.code === 'ECONNABORTED') {
+            errorMessage = 'Request timeout - API took too long to respond (>60s)';
+            debugDetails = 'Try reducing the number of questions or check API performance.';
+          } else if (err.response?.status === 0 || err.code === 'ERR_NETWORK') {
+            errorMessage = 'Network error - Cannot reach the API server';
+            debugDetails = `Check if the API is accessible: ${apiUrl}`;
+          } else if (err.response?.status >= 500) {
+            errorMessage = 'Server error - API is experiencing internal issues';
+            debugDetails = 'This is likely a temporary issue. Please try again.';
+          } else if (err.response?.status === 403) {
+            errorMessage = 'Forbidden - Access denied to API resource';
+            debugDetails = 'Check API authentication or CORS configuration.';
+          } else if (err.response?.status === 404) {
+            errorMessage = 'API endpoint not found';
+            debugDetails = `Verify API URL: ${apiUrl}`;
+          } else if (err.message.includes('CORS')) {
+            errorMessage = 'CORS policy error - Browser blocked the request';
+            debugDetails = 'API needs proper CORS headers for production deployment.';
+          }
+          
           if (i < retries - 1) {
-            console.warn(`Retrying in ${baseDelay * Math.pow(2, i)}ms...`);
-            await new Promise((resolve) => setTimeout(resolve, baseDelay * Math.pow(2, i)));
+            const delay = baseDelay * Math.pow(2, i);
+            console.warn(`Retrying in ${delay}ms... (${i + 2}/${retries})`);
+            await new Promise((resolve) => setTimeout(resolve, delay));
           } else {
-            setError(`Failed to fetch questions after ${retries} attempts: ${err.message}`);
+            const finalError = `${errorMessage}${debugDetails ? '\n\n🔧 ' + debugDetails : ''}`;
+            setError(finalError);
+            setDebugInfo(`
+               Final Error Details:
+              - Environment: ${import.meta.env.DEV ? 'Development' : 'Production'}  
+              - Mode: ${import.meta.env.MODE}
+              - API URL: ${apiUrl}
+              - Error Type: ${err.constructor.name}
+              - Status: ${err.response?.status || 'No response'}
+              - Message: ${err.message}
+              - Timestamp: ${new Date().toISOString()}
+            `);
             setLoading(false);
           }
         }
@@ -392,7 +509,7 @@ const QuestionBar = ({ formData, trigger }) => {
       <hr className="border-t border-[#B8B8B8] my-4" />
       <div className="space-y-6 max-h-[1030px] overflow-y-auto pr-2">
         {loading ? (
-          <div className="flex justify-center items-center h-full min-h-[200px]">
+          <div className="flex flex-col justify-center items-center h-full min-h-[200px] space-y-4">
             <svg
               className="animate-spin h-8 w-8 text-white"
               xmlns="http://www.w3.org/2000/svg"
@@ -413,19 +530,32 @@ const QuestionBar = ({ formData, trigger }) => {
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               ></path>
             </svg>
+            <p className="text-gray-300"> Generating questions...</p>
+            
           </div>
         ) : error ? (
           <div className="p-4 bg-red-900/20 border border-red-500 rounded-md">
-            <p className="text-red-400 font-semibold mb-2">Error Loading Questions</p>
-            <p className="text-red-300 text-sm mb-3">{error}</p>
+            <p className="text-red-400 font-semibold mb-2"> Error Loading Questions</p>
+            <pre className="text-red-300 text-sm mb-3 whitespace-pre-wrap">{error}</pre>
             {debugInfo && (
               <details className="text-xs text-red-200">
-                <summary className="cursor-pointer hover:text-red-100">Debug Information</summary>
-                <div className="mt-2 p-2 bg-red-900/30 rounded font-mono text-xs overflow-x-auto">
+                <summary className="cursor-pointer hover:text-red-100 mb-2">🔍 Debug Information</summary>
+                <div className="mt-2 p-2 bg-red-900/30 rounded font-mono text-xs overflow-x-auto whitespace-pre-wrap">
                   {debugInfo}
                 </div>
               </details>
             )}
+            <div className="mt-3 p-2 bg-blue-900/20 border-l-4 border-blue-400 rounded">
+              <p className="text-blue-200 text-sm">
+                <strong>💡 Quick fixes:</strong>
+                <br />• Check your internet connection
+                <br />• Verify API is running: <code className="bg-blue-800 px-1 rounded">
+                  curl {import.meta.env.DEV ? '/api' : 'https://x3sjgoquc2.execute-api.ap-south-1.amazonaws.com/dev'}
+                </code>
+                <br />• Try regenerating questions
+                {!import.meta.env.DEV && <><br />• Ensure CORS is enabled on API Gateway</>}
+              </p>
+            </div>
           </div>
         ) : questions.length === 0 ? (
           <p className="text-sm text-gray-400">
@@ -436,7 +566,6 @@ const QuestionBar = ({ formData, trigger }) => {
             {/* Display Scenario if available */}
             {scenario && (
               <div className="p-4 bg-[#2A2A2A] rounded-md border-l-4 border-blue-400 mb-6">
-                
                 <p className="text-gray-200 leading-relaxed">{scenario}</p>
               </div>
             )}
