@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import jsPDF from 'jspdf';
 import generateIcon from './Components_assets/Generate.svg';
 
 const QuestionBar = ({ formData, trigger }) => {
@@ -9,6 +10,298 @@ const QuestionBar = ({ formData, trigger }) => {
   const [error, setError] = useState(null);
   const [debugInfo, setDebugInfo] = useState('');
 
+  // Helper function to convert fill-in-blank format for PDF
+  const formatQuestionForPDF = (text) => {
+    if (!text) return '';
+    
+    // Replace various blank patterns with underscores
+    return text
+      .replace(/\$\s*_{3,}\s*\$/g, '_______________________') // Replace $____$ with underscores
+      .replace(/\$+[^$]*\$+/g, '_______________________') // Replace any $content$ with underscores
+      .replace(/__{3,}/g, '_______________________') // Standardize existing underscores
+      .trim();
+  };
+
+  // PDF Export function with enhanced formatting
+  const exportQuestions = () => {
+    if (questions.length === 0) {
+      alert('No questions to export');
+      return;
+    }
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // PDF styling constants
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    const contentWidth = pageWidth - (2 * margin);
+    let yPosition = margin;
+
+    // Helper function to add new page if needed
+    const checkPageBreak = (neededHeight) => {
+      if (yPosition + neededHeight > pageHeight - margin) {
+        doc.addPage();
+        yPosition = margin;
+      }
+    };
+
+    // Helper function to wrap text
+    const wrapText = (text, maxWidth, fontSize = 12) => {
+      doc.setFontSize(fontSize);
+      return doc.splitTextToSize(text, maxWidth);
+    };
+
+    // Title Page
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Generated Questions', pageWidth / 2, yPosition + 15, { align: 'center' });
+    yPosition += 30;
+
+    // Metadata section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    
+    const metadata = [
+      `Total Questions: ${questions.length}`,
+      `Question Type: ${formatQuestionType(formData?.Question_Style || formData?.question_type)}`,
+      `Export Date: ${new Date().toLocaleDateString()}`,
+      `Focus Area: ${formData?.Focus_Area || formData?.topic || 'N/A'}`,
+      `Difficulty Level: ${formData?.difficulty_level || 'Medium'}`,
+      `Learning Objective: ${formData?.learning_objective || 'N/A'}`
+    ];
+
+    metadata.forEach(item => {
+      checkPageBreak(8);
+      doc.text(item, margin, yPosition);
+      yPosition += 8;
+    });
+
+    yPosition += 10;
+
+    // Scenario section (if available)
+    if (scenario) {
+      checkPageBreak(20);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Scenario:', margin, yPosition);
+      yPosition += 8;
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      const scenarioLines = wrapText(scenario, contentWidth, 11);
+      scenarioLines.forEach(line => {
+        checkPageBreak(6);
+        doc.text(line, margin, yPosition);
+        yPosition += 6;
+      });
+      yPosition += 10;
+    }
+
+    // Questions section
+    questions.forEach((q, index) => {
+      const isFillInTheBlank = (formData?.Question_Style || formData?.question_type)?.includes('Fill-in-the-Blanks');
+      const isMultipleChoice = (formData?.Question_Style || formData?.question_type)?.includes('MCQs') || 
+                             (formData?.Question_Style || formData?.question_type)?.includes('Case-based MCQ') ||
+                             q.Options.length > 0;
+
+      // Check if we need a new page for this question
+      checkPageBreak(40);
+
+      // Question number and text with proper blank formatting
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Q${index + 1}.`, margin, yPosition);
+      
+      doc.setFont('helvetica', 'normal');
+      const formattedQuestionText = formatQuestionForPDF(q.QuestionText);
+      const questionLines = wrapText(formattedQuestionText, contentWidth - 15, 12);
+      
+      questionLines.forEach((line, lineIndex) => {
+        if (lineIndex === 0) {
+          doc.text(line, margin + 15, yPosition);
+        } else {
+          checkPageBreak(6);
+          doc.text(line, margin, yPosition);
+        }
+        yPosition += 6;
+      });
+      yPosition += 8;
+
+      // Multiple choice options
+      if (isMultipleChoice && q.Options && q.Options.length > 0) {
+        doc.setFontSize(11);
+        q.Options.forEach((option, i) => {
+          checkPageBreak(6);
+          const optionLabel = q.optionLabels ? q.optionLabels[i] : String.fromCharCode(65 + i);
+          const optionText = `${optionLabel}. ${option}`;
+          const optionLines = wrapText(optionText, contentWidth - 10, 11);
+          
+          optionLines.forEach((line, lineIndex) => {
+            if (lineIndex === 0) {
+              doc.text(line, margin + 8, yPosition);
+            } else {
+              checkPageBreak(5);
+              doc.text(line, margin + 15, yPosition);
+            }
+            yPosition += 5;
+          });
+        });
+        yPosition += 8;
+      }
+
+      // Fill in the blank answer line (for questions without embedded blanks)
+      if (isFillInTheBlank && !/\$\s*_{3,}\s*\$|\$+.*?\$+/.test(q.QuestionText)) {
+        checkPageBreak(12);
+        doc.setFontSize(11);
+        doc.text('Answer: _______________________', margin + 8, yPosition);
+        yPosition += 12;
+      }
+
+     // Alternative: Put answer on next line with indentation
+if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0); // Black color
+  doc.text('Correct Answer:', margin + 8, yPosition);
+  yPosition += 6;
+  
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 120, 0); // Dark green for answer
+  const answerLines = wrapText(q.CorrectAnswer, contentWidth - 15, 11);
+  answerLines.forEach(line => {
+    checkPageBreak(5);
+    doc.text(line, margin + 15, yPosition); // Indented answer
+    yPosition += 5;
+  });
+  yPosition += 3;
+}
+      // Explanation - ALWAYS SHOW IN PDF
+      if (q.Explanation) {
+        checkPageBreak(15);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0); // Black color
+        doc.text('Explanation:', margin + 8, yPosition);
+        yPosition += 6;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(60, 60, 60); // Dark gray for explanation
+        const explanationLines = wrapText(q.Explanation, contentWidth - 15, 10);
+        explanationLines.forEach(line => {
+          checkPageBreak(5);
+          doc.text(line, margin + 8, yPosition);
+          yPosition += 5;
+        });
+        yPosition += 5;
+      }
+
+      // Hint - ALWAYS SHOW IN PDF
+      if (q.Hint) {
+        checkPageBreak(12);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0); // Black color
+        doc.text('Hint:', margin + 8, yPosition);
+        yPosition += 6;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 0); // Dark yellow/brown for hint
+        const hintLines = wrapText(q.Hint, contentWidth - 15, 10);
+        hintLines.forEach(line => {
+          checkPageBreak(5);
+          doc.text(line, margin + 8, yPosition);
+          yPosition += 5;
+        });
+        yPosition += 5;
+      }
+
+      // Additional feedback
+      if (q.feedback?.Incorrect) {
+        checkPageBreak(10);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('If Incorrect:', margin + 8, yPosition);
+        yPosition += 5;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(150, 0, 0); // Dark red for incorrect feedback
+        const incorrectLines = wrapText(q.feedback.Incorrect, contentWidth - 15, 10);
+        incorrectLines.forEach(line => {
+          checkPageBreak(5);
+          doc.text(line, margin + 8, yPosition);
+          yPosition += 5;
+        });
+        yPosition += 3;
+      }
+
+      // Tags
+      if ((q.Tags && q.Tags.length > 0) || (formData?.tags && formData.tags.length > 0)) {
+        checkPageBreak(10);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Tags:', margin + 8, yPosition);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100); // Gray for tags
+        const tags = q.Tags && q.Tags.length > 0 ? q.Tags : formData.tags.filter(tag => tag.trim());
+        const tagsText = tags.join(', ');
+        const tagLines = wrapText(tagsText, contentWidth - 20, 9);
+        
+        tagLines.forEach((line, lineIndex) => {
+          if (lineIndex === 0) {
+            doc.text(line, margin + 20, yPosition);
+          } else {
+            checkPageBreak(4);
+            doc.text(line, margin + 8, yPosition);
+          }
+          yPosition += 4;
+        });
+        yPosition += 5;
+      }
+
+      // Reset text color to black for next question
+      doc.setTextColor(0, 0, 0);
+
+      // Add spacing between questions
+      yPosition += 15;
+
+      // Add a separator line between questions (except for the last one)
+      if (index < questions.length - 1) {
+        checkPageBreak(8);
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, yPosition - 8, pageWidth - margin, yPosition - 8);
+        yPosition += 5;
+      }
+    });
+
+    // Add footer with page numbers
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      
+      // Add generation timestamp on first page
+      if (i === 1) {
+        doc.text(`Generated on ${new Date().toLocaleString()}`, margin, pageHeight - 10);
+      }
+    }
+
+    // Save the PDF
+    const fileName = `questions_export_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  };
+
+  // Rest of your existing code remains the same...
   useEffect(() => {
     if (!formData) {
       console.log('No formData provided to QuestionBar');
@@ -30,15 +323,13 @@ const QuestionBar = ({ formData, trigger }) => {
       
       const isCaseBased = formData.Scenarios !== undefined || formData.Question_Style === 'Case-based MCQ';
       
-      // ✅ Using Vite's built-in environment detection
       const apiUrl = isCaseBased
         ? (import.meta.env.DEV 
-            ? '/api'  // Uses proxy in development
-            : 'https://x3sjgoquc2.execute-api.ap-south-1.amazonaws.com/dev'  // Direct call in production
+            ? '/api'
+            : 'https://x3sjgoquc2.execute-api.ap-south-1.amazonaws.com/dev'
           )
         : 'https://fypc6y8q41.execute-api.ap-south-1.amazonaws.com/dev';
 
-      // Enhanced logging for debugging
       console.log('🔍 Environment Details:');
       console.log('- Development mode:', import.meta.env.DEV);
       console.log('- Production mode:', import.meta.env.PROD);
@@ -76,7 +367,6 @@ const QuestionBar = ({ formData, trigger }) => {
             headers: { 
               'Content-Type': 'application/json',
               'Accept': 'application/json',
-              // Add Origin header for CORS in production
               ...(!import.meta.env.DEV && { 'Origin': window.location.origin })
             },
             signal: controller.signal,
@@ -91,11 +381,9 @@ const QuestionBar = ({ formData, trigger }) => {
           console.log('- Data type:', typeof response.data);
           console.log('- Data content:', response.data);
 
-          // ✅ Enhanced response validation for different API response formats
           let responseData = response.data;
           let body;
 
-          // Check if response is HTML (indicates routing/proxy issue)
           if (typeof responseData === 'string' && responseData.includes('<!DOCTYPE html>')) {
             throw new Error(`Received HTML response instead of JSON. This indicates a routing/proxy issue. 
               Possible causes:
@@ -107,12 +395,10 @@ const QuestionBar = ({ formData, trigger }) => {
               Debug info: Environment=${import.meta.env.DEV ? 'dev' : 'prod'}, URL=${apiUrl}`);
           }
 
-          // Handle different response structures
           if (!responseData) {
             throw new Error('Empty response received from API');
           }
 
-          // Case 1: AWS API Gateway response with body property (typical Lambda response)
           if (responseData.body && typeof responseData.body === 'string') {
             try {
               body = JSON.parse(responseData.body);
@@ -121,12 +407,10 @@ const QuestionBar = ({ formData, trigger }) => {
               throw new Error(`Failed to parse AWS Lambda response body JSON: ${parseError.message}`);
             }
           }
-          // Case 2: Direct API response (object)
           else if (typeof responseData === 'object') {
             body = responseData;
             console.log('Using direct API response object');
           }
-          // Case 3: String response that needs parsing
           else if (typeof responseData === 'string') {
             try {
               body = JSON.parse(responseData);
@@ -139,12 +423,10 @@ const QuestionBar = ({ formData, trigger }) => {
             throw new Error(`Unexpected response format: ${typeof responseData}`);
           }
 
-          // Check for API-level errors
           if (body.error || body.errorMessage || body.message?.includes('error')) {
             throw new Error(`API returned an error: ${body.error || body.errorMessage || body.message}`);
           }
 
-          // Get the questions data
           let questionsString = body.questions || body.Questions || body.data?.questions;
           let scenarioText = '';
           let parsedQuestions = [];
@@ -154,7 +436,6 @@ const QuestionBar = ({ formData, trigger }) => {
           console.log('- Length:', questionsString?.length);
           console.log('- First 500 chars:', questionsString?.substring(0, 500) || 'N/A');
 
-          // Store enhanced debug info
           setDebugInfo(`
              Debug Information:
             - Environment: ${import.meta.env.DEV ? 'Development' : 'Production'}
@@ -167,33 +448,28 @@ const QuestionBar = ({ formData, trigger }) => {
           `);
 
           if (typeof questionsString === 'string') {
-            // Enhanced cleaning with step-by-step logging
             let cleanedString = questionsString;
             
             console.log('Step 1 - Original:', cleanedString.substring(0, 100));
             
-            // Remove various wrapper patterns
             cleanedString = cleanedString
               .trim()
-              .replace(/^\uFEFF/, '') // Remove BOM
-              .replace(/``````/g, '') // Remove code blocks
-              .replace(/^"/, '').replace(/"$/, ''); // Remove outer quotes
+              .replace(/^\uFEFF/, '')
+              .replace(/``````/g, '')
+              .replace(/^"/, '').replace(/"$/, '');
               
             console.log('Step 2 - After wrapper removal:', cleanedString.substring(0, 100));
             
-            // Handle escaped content
             cleanedString = cleanedString
-              .replace(/\\"/g, '"') // Unescape quotes
-              .replace(/\\\\/g, '\\') // Unescape backslashes
-              .replace(/\\n/g, '') // Remove escaped newlines
-              .replace(/\\r/g, ''); // Remove escaped carriage returns
+              .replace(/\\"/g, '"')
+              .replace(/\\\\/g, '\\')
+              .replace(/\\n/g, '')
+              .replace(/\\r/g, '');
               
             console.log('Step 3 - After unescaping:', cleanedString.substring(0, 100));
 
-            // Try different parsing strategies
             let parseSuccess = false;
 
-            // Strategy 1: Direct parsing
             if (!parseSuccess) {
               try {
                 console.log('Attempting direct JSON parse...');
@@ -218,7 +494,6 @@ const QuestionBar = ({ formData, trigger }) => {
               }
             }
 
-            // Strategy 2: Extract JSON object from string
             if (!parseSuccess) {
               try {
                 console.log('Attempting JSON extraction...');
@@ -241,12 +516,10 @@ const QuestionBar = ({ formData, trigger }) => {
               }
             }
 
-            // Strategy 3: Enhanced regex with more flexible patterns
             if (!parseSuccess) {
               try {
                 console.log('Attempting enhanced regex extraction...');
                 
-                // More flexible scenario extraction
                 const scenarioPatterns = [
                   /"Scenario"\s*:\s*"([^"]*(?:\\.[^"]*)*)"/,
                   /'Scenario'\s*:\s*'([^']*(?:\\.[^']*)*)'/,
@@ -262,7 +535,6 @@ const QuestionBar = ({ formData, trigger }) => {
                   }
                 }
 
-                // More flexible questions extraction
                 const questionsPatterns = [
                   /"Questions"\s*:\s*(\[[\s\S]*?\](?=\s*[,}]|$))/,
                   /'Questions'\s*:\s*(\[[\s\S]*?\](?=\s*[,}]|$))/,
@@ -280,9 +552,8 @@ const QuestionBar = ({ formData, trigger }) => {
                 }
 
                 if (questionsStr) {
-                  // Clean up the questions string
                   questionsStr = questionsStr
-                    .replace(/,(\s*[\]}])/g, '$1') // Remove trailing commas
+                    .replace(/,(\s*[\]}])/g, '$1')
                     .replace(/\\"/g, '"')
                     .replace(/\\\\/g, '\\');
                   
@@ -296,7 +567,6 @@ const QuestionBar = ({ formData, trigger }) => {
               }
             }
 
-            // Strategy 4: Line-by-line text parsing (fallback)
             if (!parseSuccess) {
               console.log('Attempting line-by-line text parsing...');
               const lines = cleanedString.split(/[\n\r]+/);
@@ -330,7 +600,6 @@ const QuestionBar = ({ formData, trigger }) => {
               }
             }
 
-            // Final fallback
             if (!parseSuccess) {
               console.log('All parsing strategies failed, using final fallback');
               parsedQuestions = [{ 
@@ -340,7 +609,7 @@ const QuestionBar = ({ formData, trigger }) => {
                 Explanation: 'The API response could not be parsed properly.'
               }];
               scenarioText = `Parsing Error - Unable to extract questions from API 
-                Try regenerating questions or check API configuration.`;
+                Try regenerating questions `;
             }
 
           } else if (Array.isArray(questionsString)) {
@@ -361,7 +630,6 @@ const QuestionBar = ({ formData, trigger }) => {
             throw new Error('No valid questions could be extracted from the response');
           }
 
-          // Transform questions to match component structure
           const updatedQuestions = parsedQuestions.map((q, index) => ({
             QuestionText: q.QuestionStem || q.QuestionText || q.question || q.text || `Question ${index + 1}`,
             Options: q.Options ? (typeof q.Options === 'object' ? Object.values(q.Options) : q.Options) : (q.options || []),
@@ -392,7 +660,6 @@ const QuestionBar = ({ formData, trigger }) => {
 
           console.error(`Attempt ${i + 1} failed:`, err);
 
-          // Enhanced error messages with specific guidance
           let errorMessage = err.message;
           let debugDetails = '';
 
@@ -499,7 +766,13 @@ const QuestionBar = ({ formData, trigger }) => {
         </div>
         <button
           type="button"
-          className="w-full sm:w-auto bg-[#0296E0] text-[#0D0D0D] font-poppins font-medium py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-colors"
+          onClick={exportQuestions}
+          disabled={questions.length === 0 || loading}
+          className={`w-full sm:w-auto ${
+            questions.length === 0 || loading 
+              ? 'bg-gray-500 cursor-not-allowed' 
+              : 'bg-[#0296E0] hover:bg-[#0280C7]'
+          } text-[#0D0D0D] font-poppins font-medium py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-colors`}
         >
           <img src={generateIcon} alt="Generate" />
           <span>Export</span>
@@ -529,12 +802,12 @@ const QuestionBar = ({ formData, trigger }) => {
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               ></path>
             </svg>
-            <p className="text-gray-300"> Generating questions...</p>
+            <p className="text-gray-300">Generating questions...</p>
             
           </div>
         ) : error ? (
           <div className="p-4 bg-red-900/20 border border-red-500 rounded-md">
-            <p className="text-red-400 font-semibold mb-2"> Error Loading Questions</p>
+            <p className="text-red-400 font-semibold mb-2">Error Loading Questions</p>
             <pre className="text-red-300 text-sm mb-3 whitespace-pre-wrap">{error}</pre>
             {debugInfo && (
               <details className="text-xs text-red-200">
@@ -562,14 +835,12 @@ const QuestionBar = ({ formData, trigger }) => {
           </p>
         ) : (
           <>
-            {/* Display Scenario if available */}
             {scenario && (
               <div className="p-4 bg-[#2A2A2A] rounded-md border-l-4 border-blue-400 mb-6">
                 <p className="text-gray-200 leading-relaxed">{scenario}</p>
               </div>
             )}
 
-            {/* Display Questions */}
             {questions.map((q, index) => {
               const isFillInTheBlank = (formData?.Question_Style || formData?.question_type)?.includes('Fill-in-the-Blanks');
               const isMultipleChoice = (formData?.Question_Style || formData?.question_type)?.includes('MCQs') || 
@@ -585,7 +856,6 @@ const QuestionBar = ({ formData, trigger }) => {
                       : q.QuestionText}
                   </p>
 
-                  {/* Multiple Choice Options */}
                   {isMultipleChoice && q.Options && q.Options.length > 0 && (
                     <div className="ml-4 mb-4">
                       {q.Options.map((option, i) => (
@@ -599,7 +869,6 @@ const QuestionBar = ({ formData, trigger }) => {
                     </div>
                   )}
 
-                  {/* Fill in the blank input */}
                   {isFillInTheBlank && !/\$\s*_{3,}\s*\$|\$+.*?\$+/.test(q.QuestionText) && (
                     <div className="mb-4">
                       <input
@@ -611,7 +880,6 @@ const QuestionBar = ({ formData, trigger }) => {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
                   <div className="flex gap-4 mb-3">
                     {q.Hint && (
                       <button
@@ -631,7 +899,6 @@ const QuestionBar = ({ formData, trigger }) => {
                     )}
                   </div>
 
-                  {/* Display Hint and Answer */}
                   <div className="space-y-3">
                     {q.showHint && q.Hint && (
                       <div className="p-3 bg-yellow-900/20 border-l-4 border-yellow-400 rounded">
@@ -645,7 +912,7 @@ const QuestionBar = ({ formData, trigger }) => {
                       <div className="space-y-2">
                         <div className="p-3 bg-green-900/20 border-l-4 border-green-400 rounded">
                           <p className="text-green-200">
-                            <strong className="text-green-400">✅ Correct Answer:</strong> {q.CorrectAnswer}
+                            <strong className="text-green-400"> Correct Answer: </strong> {q.CorrectAnswer}
                           </p>
                         </div>
                         
@@ -668,7 +935,6 @@ const QuestionBar = ({ formData, trigger }) => {
                     )}
                   </div>
 
-                  {/* Tags */}
                   {((q.Tags && q.Tags.length > 0) || (formData?.tags && formData.tags.length > 0)) && (
                     <div className="mt-3 pt-3 border-t border-gray-700">
                       <div className="flex flex-wrap gap-2">
