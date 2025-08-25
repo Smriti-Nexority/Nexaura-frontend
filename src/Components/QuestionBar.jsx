@@ -579,13 +579,8 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
                   if (Object.keys(currentQuestion).length > 0) {
                     tempQuestions.push(currentQuestion);
                   }
-                  const questionMatch = trimmed.match(/"([^"]+)"/);
-                  currentQuestion = {
-                    QuestionStem: questionMatch ? questionMatch[1] : 'Extracted question',
-                    Options: { A: 'Option A', B: 'Option B', C: 'Option C', D: 'Option D' },
-                    CorrectAnswer: 'A',
-                    Feedback: { Correct: 'This question was extracted from malformed text.' }
-                  };
+                  
+                 
                 }
               }
               if (Object.keys(currentQuestion).length > 0) {

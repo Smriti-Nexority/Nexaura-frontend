@@ -184,7 +184,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
 
     const payload = {
       subject: questionCategory !== 'scenario-based' ? formData.subject : undefined,
-      Focus_Area: formData.Focus_Area || formData.tags.join(',') || (questionCategory === 'scenario-based' ? 'Animal Nutrition' : ''),
+      Focus_Area: formData.Focus_Area || formData.tags.join(',') || (questionCategory === 'scenario-based' ? '' : ''),
       tags: formData.tags,
       Question_Style: questionTypeForApi,
       questionType: formData.questionType,
