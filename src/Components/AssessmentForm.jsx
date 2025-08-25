@@ -32,7 +32,7 @@ const defaultScenarioFormData = {
   description: 'Include realistic clinical situations',
   grade: 'Advanced',
   bloomsTaxonomy: 'Apply',
-  title: 'Case-Based Animal Nutrition Assessment',
+  title: 'Assessment Craft',
   totalMarks: '',
   totalTime: '',
   Focus_Area: 'Animal Nutrition',
@@ -231,7 +231,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
             name="title"
             value={formData.title}
             onChange={handleInputChange}
-            placeholder="e.g. Case-Based Animal Nutrition Assessment"
+            placeholder="Assessment Craft"
             className="w-full bg-[#0D0D0D] border border-[#2F343C] rounded-lg px-3 py-2 text-white placeholder-[#ADAEBC] focus:border-[#7DB8FF] focus:outline-none text-sm"
           />
         </div>

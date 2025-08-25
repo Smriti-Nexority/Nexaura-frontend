@@ -41,7 +41,7 @@ const AssessmentDashboard = ({ formData: externalFormData, setFormData, trigger,
   const formData = externalFormData || localFormData;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 p-6 w-[1250px] mx-auto">
+    <div className="flex flex-col lg:flex-row gap-6 p-6 w-[1250px] mx-auto bg-[#252525]">
       <div className="lg:w-[381px] flex-shrink-0">
         <AssessmentForm
           onGenerate={handleGenerate}

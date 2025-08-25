@@ -66,7 +66,7 @@ const App = () => {
           subject: 'Animal Nutrition',
           tags: ['Animal Nutrition'],
           learning_objective: 'Understand nutritional requirements in clinical scenarios',
-          title: 'Case-Based Animal Nutrition Assessment',
+          title: 'Assesssment Craft',
           totalMarks: '',
           totalTime: '',
           difficulty: { hard: true, easy: false, medium: false },
