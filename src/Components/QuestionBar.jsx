@@ -301,8 +301,14 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
     doc.save(fileName);
   };
 
-  // Rest of your existing code remains the same...
+
   useEffect(() => {
+    // Prevent fetching if trigger is initial value (0)
+    if (trigger === 0) {
+      console.log('Skipping fetch: trigger is 0 (initial state)');
+      return;
+    }
+
     if (!formData) {
       console.log('No formData provided to QuestionBar');
       setError('No form data provided. Please submit the form or upload a file.');
@@ -330,7 +336,7 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
           )
         : 'https://fypc6y8q41.execute-api.ap-south-1.amazonaws.com/dev';
 
-      console.log('🔍 Environment Details:');
+      console.log('Environment Details:');
       console.log('- Development mode:', import.meta.env.DEV);
       console.log('- Production mode:', import.meta.env.PROD);
       console.log('- Mode:', import.meta.env.MODE);
@@ -367,7 +373,6 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
             headers: { 
               'Content-Type': 'application/json',
               'Accept': 'application/json',
-              ...(!import.meta.env.DEV && { 'Origin': window.location.origin })
             },
             signal: controller.signal,
             timeout: 60000,

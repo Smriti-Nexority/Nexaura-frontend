@@ -17,8 +17,8 @@ const Navbar = ({ onFileUpload }) => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  // CHANGE: Trigger modal on Upload click
   const handleUploadClick = () => {
+    // Trigger file upload modal without affecting question generation
     onFileUpload(null, false, isChecked, true);
   };
 

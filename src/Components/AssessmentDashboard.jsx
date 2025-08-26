@@ -35,7 +35,13 @@ const AssessmentDashboard = ({ formData: externalFormData, setFormData, trigger,
     };
     setLocalFormData(updatedPayload);
     setFormData(updatedPayload);
-    setTrigger(Date.now());
+    setTrigger(Date.now()); // Trigger question generation only on form submission
+  };
+
+  const handleFileUpload = (file, isScenarioBased, isSubjectChecked, showModal) => {
+    // Handle file upload without triggering question generation
+    onFileUpload(file, isScenarioBased, isSubjectChecked, showModal);
+    // Ensure trigger is not updated
   };
 
   const formData = externalFormData || localFormData;
@@ -48,7 +54,7 @@ const AssessmentDashboard = ({ formData: externalFormData, setFormData, trigger,
           externalFormData={formData}
           questionCategory={questionCategory}
           showFileInput={showFileInput}
-          onFileUpload={onFileUpload}
+          onFileUpload={handleFileUpload}
         />
       </div>
       <div className="flex-1">
