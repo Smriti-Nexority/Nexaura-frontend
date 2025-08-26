@@ -164,7 +164,7 @@ const App = () => {
                   </select>
                   <button
                     onClick={() => handleModalSelect('simple')}
-                    className="bg-[#0296E0] text-white font-medium py-2 px-4 rounded-md hover:bg-[#2E8CFF] active:bg-[#0278C0] transition-colors duration-200"
+                    className="bg-blue-300 text-black font-medium py-2 px-4 rounded-md hover:bg-[#2E8CFF] active:bg-[#0278C0] transition-colors duration-200"
                     aria-label="Select Simple Questions"
                   >
                     Choose
@@ -189,7 +189,7 @@ const App = () => {
                   </select>
                   <button
                     onClick={() => handleModalSelect('scenario-based')}
-                    className="bg-[#0296E0] text-white font-medium py-2 px-4 rounded-md hover:bg-[#2E8CFF] active:bg-[#0278C0] transition-colors duration-200"
+                    className="bg-blue-300 text-black font-medium py-2 px-4 rounded-md hover:bg-[#2E8CFF] active:bg-[#0278C0] transition-colors duration-200"
                     aria-label="Select Scenario-Based Questions"
                   >
                     Choose
@@ -202,7 +202,7 @@ const App = () => {
                 console.log('Modal cancelled');
                 setShowModal(false);
               }}
-              className="mt-6 w-full bg-gray-600 text-white font-medium py-2 px-4 rounded-md hover:bg-gray-700 active:bg-gray-800 transition-colors duration-200"
+              className="mt-6 w-full bg-blue-300 text-black font-medium py-2 px-4 rounded-md hover:bg-gray-700 active:bg-gray-800 transition-colors duration-200"
               aria-label="Cancel question type selection"
             >
               Cancel
