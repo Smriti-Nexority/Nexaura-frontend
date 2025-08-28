@@ -92,13 +92,16 @@ button:focus-visible {
 /* enabled state: bg-[#0296E0] hover:bg-[#0280C7] */
 .export-button {
   background-color: #0296E0;
-  color: #fff;
   border: none;
   border-radius: 0.5rem;     /* ~rounded-xl */
   padding: 0.5rem 1rem;      /* ~py-2 px-4 */
   font-weight: 600;          /* ~font-semibold */
   transition: background-color 150ms ease, box-shadow 150ms ease;
   cursor: pointer;
+}
+
+.bell-button{
+  background-color: #0D0D0D;
 }
 
 .export-button:hover {

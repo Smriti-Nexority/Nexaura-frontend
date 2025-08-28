@@ -69,7 +69,7 @@ const Navbar = ({ onFileUpload }) => {
                 className="bg-transparent text-white placeholder-gray-400 focus:outline-none flex-1"
               />
             </div>
-            <button className="flex items-center justify-center bg-[#0D0D0D] border border-[#282828] rounded-2xl w-12 h-12 hover:bg-[#1a1a1a] transition-colors">
+            <button className="flex items-center justify-center bg-[#0D0D0D] border border-[#282828] rounded-2xl w-12 h-12 hover:bg-[#1a1a1a] transition-colors bell-button">
               <Bell size={20} />
             </button>
             <div className="flex items-center justify-between bg-[#0D0D0D] border border-[#282828] rounded-[6px] w-[100px] h-12 hover:bg-[#1a1a1a] transition-colors">
