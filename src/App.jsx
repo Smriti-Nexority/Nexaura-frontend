@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import Sidebar  from './Components/sidebar';
+import Sidebar from './Components/Sidebar';
 import Navbar from './Components/Navbar';
 import AssessmentDashboard from './Components/AssessmentDashboard';
 
@@ -58,7 +58,7 @@ const App = () => {
           difficulty_level: 'Hard',
           Learner_Level: scenarioLearnerLevel,
           special_instruction: 'Include realistic clinical situations and avoid overly simplistic wording.',
-          BASE_CONTENT: 'Animals require a balanced diet for optimal health. Nutritional needs vary by species, age, activity level, and health condition. Common deficiencies include lack of protein, calcium, and vitamins. Overfeeding can lead to obesity, which increases the risk of joint problems and diabetes. For example, working dogs may require high-protein diets, while senior cats often need reduced-calorie meals.',
+          BASE_CONTENT: 'Animals require a balanced diet for optimal health...',
           file_content: base64Content,
           max_question: 4,
           blooms_taxonomy: 'Apply',
@@ -117,7 +117,7 @@ const App = () => {
       Question_Style: category === 'scenario-based' ? 'Case-based MCQ' : simpleQuestionType,
       Scenarios: category === 'scenario-based' ? '1' : undefined,
       Learner_Level: category === 'scenario-based' ? scenarioLearnerLevel : undefined,
-      special_instruction: category === 'scenario-based' ? 'Include realistic clinical situations and avoid overly simplistic wording.' : undefined,
+      special_instruction: category === 'scenario-based' ? 'Include realistic clinical situations...' : undefined,
       max_question: category === 'scenario-based' ? 4 : 6,
       numQuestions: category === 'scenario-based' ? 4 : 6,
       subject: category === 'scenario-based' ? 'Animal Nutrition' : 'Mathematics',
@@ -126,7 +126,7 @@ const App = () => {
       tags: category === 'scenario-based' ? ['Animal Nutrition'] : ['triangle'],
       difficulty_level: category === 'scenario-based' ? 'Hard' : 'Medium',
       difficulty: category === 'scenario-based' ? { hard: true, easy: false, medium: false } : { easy: false, medium: true, hard: false },
-      learning_objective: category === 'scenario-based' ? 'Understand nutritional requirements in clinical scenarios' : 'Hands on practice',
+      learning_objective: category === 'scenario-based' ? 'Understand nutritional requirements...' : 'Hands on practice',
       BASE_CONTENT: category === 'scenario-based' ? '' : '',
       base_content: category === 'scenario-based' ? '' : '',
     };
@@ -210,7 +210,7 @@ const App = () => {
           </div>
         </div>
       )}
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen w-full max-w-full">
         <Sidebar />
         <div className="flex-1">
           <AssessmentDashboard
