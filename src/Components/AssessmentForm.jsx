@@ -407,7 +407,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
                       className="bg-[#8FA9FF] px-3 py-1 rounded-full text-sm flex items-center text-[#141054] font-medium"
                     >
                       {tag}
-                      <button type="button" onClick={() => removeTag(tag)} className="ml-2 focus:outline-none">
+                      <button type="button" onClick={() => removeTag(tag)} className="ml-2 focus:outline-none tag-button">
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -486,7 +486,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
         </div>
         <button
           type="submit"
-          className="w-full bg-[#0296E0] text-black font-medium py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-transform duration-200 hover:scale-105 "
+          className="w-full bg-[#0296E0] text-black font-medium py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-transform duration-200 hover:scale-105 generate-button"
         >
           <img src={generateIcon} alt="logo" />
           <span>Generate Questions</span>

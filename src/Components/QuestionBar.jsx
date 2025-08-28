@@ -766,7 +766,7 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
           className={`w-full sm:w-auto ${
             questions.length === 0 || loading 
               ? 'bg-gray-500 cursor-not-allowed' 
-              : 'bg-[#0296E0] hover:bg-[#0280C7]'
+              : 'bg-[#0296E0] hover:bg-[#0280C7] export-button'
           } text-[#0D0D0D] font-poppins font-medium py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-colors`}
         >
           <img src={generateIcon} alt="Generate" />
@@ -861,7 +861,7 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
                     {q.Hint && (
                       <button
                         onClick={() => toggleHint(index)}
-                        className="text-yellow-400 text-sm hover:text-yellow-300 transition-colors"
+                        className="text-yellow-400 text-sm hover:text-yellow-300 transition-colors hint-button"
                       >
                         {q.showHint ? 'Hide Hint' : 'Show Hint'}
                       </button>
@@ -869,7 +869,7 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
                     {q.CorrectAnswer && q.CorrectAnswer !== 'N/A' && (
                       <button
                         onClick={() => toggleAnswer(index)}
-                        className="text-green-400 text-sm hover:text-green-300 transition-colors"
+                        className="text-green-400 text-sm hover:text-green-300 transition-colors ans-button"
                       >
                         {q.showAnswer ? 'Hide Answer' : 'Show Answer'}
                       </button>

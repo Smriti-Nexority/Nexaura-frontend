@@ -53,7 +53,7 @@ const Navbar = ({ onFileUpload }) => {
               </div>
               <button
                 onClick={handleUploadClick}
-                className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer"
+                className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer upload-button"
               >
                 <img src={file} alt="upload" />
                 Upload
@@ -107,7 +107,7 @@ const Navbar = ({ onFileUpload }) => {
               </div>
               <button
                 onClick={handleUploadClick}
-                className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer"
+                className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer bg-[#2F2F2F]"
               >
                 <img src={file} alt="upload" />
                 Upload

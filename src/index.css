@@ -35,6 +35,7 @@ body {
   min-height: 100vh;
   box-sizing: border-box;
   overflow-x: hidden;
+  background-color: #242424;
 }
 
 h1 {
@@ -46,6 +47,18 @@ h1 {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
+}
+
+.upload-button{
+  background-color: #2F2F2F2F;
+}
+
+.tag-button{
+  background-color: #8FA9FF;
+}
+
+.generate-button{
+  background-color: #0296E0;
 }
 
 /* Ensure modal is responsive */
@@ -74,6 +87,43 @@ button:focus-visible {
   margin: 0 auto;
   padding: clamp(1rem, 2vw, 1.5rem);
   box-sizing: border-box;
+}
+
+/* enabled state: bg-[#0296E0] hover:bg-[#0280C7] */
+.export-button {
+  background-color: #0296E0;
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;     /* ~rounded-xl */
+  padding: 0.5rem 1rem;      /* ~py-2 px-4 */
+  font-weight: 600;          /* ~font-semibold */
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+  cursor: pointer;
+}
+
+.export-button:hover {
+  background-color: #0280C7; /* hover:bg-[#0280C7] */
+}
+
+/* disabled state: bg-gray-500 cursor-not-allowed */
+.export-button:disabled,
+.export-button.is-disabled {
+  background-color: #6B7280; /* Tailwind gray-500 */
+  cursor: not-allowed;       /* cursor-not-allowed */
+  opacity: 0.7;
+}
+
+/* prevent hover color when disabled */
+.export-button:disabled:hover,
+.export-button.is-disabled:hover {
+  background-color: #6B7280;
+}
+
+.hint-button{
+  background-color: #1A1A1A;
+}
+.ans-button{
+  background-color: #1A1A1A;
 }
 
 /* Responsive layout for AssessmentDashboard */
