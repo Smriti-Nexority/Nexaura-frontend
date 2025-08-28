@@ -3,7 +3,7 @@ import generateIcon from './Components_assets/Generate.svg';
 
 const defaultSimpleFormData = {
   subject: 'Mathematics',
-  tags: ['triangle'],
+  tags: [], // start empty, subject is separate
   questionType: 'multiple-choice',
   question_type: 'multiple-choice',
   numQuestions: 6,
@@ -18,13 +18,14 @@ const defaultSimpleFormData = {
   max_question: 6,
   blooms_taxonomy: 'Apply',
   difficulty_level: 'Medium',
-  base_content: 'Animals require a balanced diet for optimal health. Nutritional needs vary by species, age, activity level, and health condition. Common deficiencies include lack of protein, calcium, and vitamins. Overfeeding can lead to obesity, which increases the risk of joint problems and diabetes. For example, working dogs may require high-protein diets, while senior cats often need reduced-calorie meals.',
+  base_content:
+    'Animals require a balanced diet for optimal health. Nutritional needs vary by species, age, activity level, and health condition. Common deficiencies include lack of protein, calcium, and vitamins. Overfeeding can lead to obesity, which increases the risk of joint problems and diabetes. For example, working dogs may require high-protein diets, while senior cats often need reduced-calorie meals.',
   learning_objective: 'Hands on practice',
 };
 
 const defaultScenarioFormData = {
   subject: 'Animal Nutrition',
-  tags: ['Animal Nutrition'],
+  tags: [],
   questionType: 'case-based',
   Question_Style: 'Case-based MCQ',
   numQuestions: 4,
@@ -55,25 +56,32 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
 
   useEffect(() => {
     if (externalFormData) {
-      const difficultyFromExternal = externalFormData.difficulty_level ||
+      const difficultyFromExternal =
+        externalFormData.difficulty_level ||
         (externalFormData.difficulty
-          ? Object.keys(externalFormData.difficulty)
-              .filter((key) => externalFormData.difficulty[key])
+          ? Object.keys(externalFormData.difficulty).filter((key) => externalFormData.difficulty[key])
           : ['medium']);
-
       const difficultyLevel = Array.isArray(difficultyFromExternal)
-        ? difficultyFromExternal.map(key => key.charAt(0).toUpperCase() + key.slice(1)).join(',')
+        ? difficultyFromExternal.map((key) => key.charAt(0).toUpperCase() + key.slice(1)).join(',')
         : difficultyFromExternal;
 
-      // Merge externalFormData with existing formData to preserve user edits
       setFormData((prev) => ({
         ...prev,
         ...externalFormData,
-        question_type: externalFormData.question_type || externalFormData.Question_Style || prev.question_type || (questionCategory === 'scenario-based' ? 'Case-based MCQ' : 'multiple-choice'),
+        question_type:
+          externalFormData.question_type ||
+          externalFormData.Question_Style ||
+          prev.question_type ||
+          (questionCategory === 'scenario-based' ? 'Case-based MCQ' : 'multiple-choice'),
         difficulty_level: difficultyLevel,
-        learning_objective: externalFormData.learning_objective || externalFormData.description || prev.learning_objective || (questionCategory === 'scenario-based' ? 'Understand nutritional requirements in clinical scenarios' : 'Hands on practice'),
+        learning_objective:
+          externalFormData.learning_objective ||
+          externalFormData.description ||
+          prev.learning_objective ||
+          (questionCategory === 'scenario-based' ? 'Understand nutritional requirements in clinical scenarios' : 'Hands on practice'),
         Focus_Area: externalFormData.Focus_Area || externalFormData.topic || prev.Focus_Area || (questionCategory === 'scenario-based' ? 'Animal Nutrition' : ''),
         BASE_CONTENT: externalFormData.BASE_CONTENT || externalFormData.base_content || prev.BASE_CONTENT || '',
+        tags: Array.isArray(externalFormData.tags) ? externalFormData.tags : prev.tags, // keep tags if provided externally
       }));
     }
   }, [externalFormData, questionCategory]);
@@ -101,18 +109,29 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-      ...(name === 'questionType' ? { Question_Style: value === 'case-based' ? 'Case-based MCQ' : value } : {}),
-    }));
+
+    if (name === 'subject') {
+      // On subject change, reset tags to empty, let user add tags explicitly
+      setFormData((prev) => ({
+        ...prev,
+        subject: value,
+        tags: [],
+        Focus_Area: value,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        ...(name === 'questionType' ? { Question_Style: value === 'case-based' ? 'Case-based MCQ' : value } : {}),
+      }));
+    }
+
     setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const allowedTypes = [
       'application/pdf',
       'application/vnd.ms-powerpoint',
@@ -120,12 +139,10 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
-
     if (!allowedTypes.includes(file.type)) {
       alert('Only PDF, PPT, and Word files are allowed.');
       return;
     }
-
     onFileUpload(file, questionCategory === 'scenario-based', false, false);
   };
 
@@ -141,7 +158,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
       e.preventDefault();
       setFormData((prev) => ({
         ...prev,
-        tags: [...prev.tags, newTag.trim()],
+        tags: prev.tags.includes(newTag.trim()) ? prev.tags : [...prev.tags, newTag.trim()],
       }));
       setNewTag('');
     }
@@ -182,9 +199,12 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
       questionTypeForApi = questionCategory === 'scenario-based' ? 'Case-based MCQ' : '6 MCQs';
     }
 
+    // Combine subject and tags explicitly for Focus_Area in payload
+    const combinedFocusArea = [formData.subject, ...formData.tags].filter(Boolean).join(',');
+
     const payload = {
       subject: questionCategory !== 'scenario-based' ? formData.subject : undefined,
-      Focus_Area: formData.Focus_Area || formData.tags.join(',') || (questionCategory === 'scenario-based' ? '' : ''),
+      Focus_Area: combinedFocusArea,
       tags: formData.tags,
       Question_Style: questionTypeForApi,
       questionType: formData.questionType,
@@ -195,17 +215,18 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
       learning_objective: formData.learning_objective,
       grade: formData.grade,
       BASE_CONTENT: formData.BASE_CONTENT || '',
-      ...(questionCategory === 'scenario-based' ? {
-        Scenarios: formData.Scenarios,
-        Learner_Level: formData.Learner_Level,
-        special_instruction: formData.special_instruction,
-      } : {}),
+      ...(questionCategory === 'scenario-based'
+        ? {
+            Scenarios: formData.Scenarios,
+            Learner_Level: formData.Learner_Level,
+            special_instruction: formData.special_instruction,
+          }
+        : {}),
       file_content: formData.file_content || undefined,
     };
 
     console.log('Generated payload:', JSON.stringify(payload, null, 2));
     onGenerate(payload);
-    // No reset of formData here to persist user inputs
   };
 
   return (
@@ -213,9 +234,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
       <form onSubmit={handleSubmit} className="space-y-6">
         {showFileInput && (
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Upload File (PDF, PPT, Word)
-            </label>
+            <label className="block text-sm font-medium mb-2">Upload File (PDF, PPT, Word)</label>
             <input
               type="file"
               onChange={handleFileChange}
@@ -225,7 +244,9 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
           </div>
         )}
         <div>
-          <label className="block text-sm font-medium mb-2">Assessment Title</label>
+          <label className="block text-sm font-medium mb-2">
+            Assessment Title
+          </label>
           <input
             type="text"
             name="title"
@@ -283,7 +304,6 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
             </div>
           </>
         )}
-        
         {questionCategory === 'scenario-based' ? (
           <>
             <div>
@@ -329,11 +349,9 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
               />
               {errors.Focus_Area && <p className="text-red-400 text-sm mt-1">{errors.Focus_Area}</p>}
             </div>
-         
+
             <div>
-              <label className="block text-sm font-medium mb-2">
-                Special Instructions
-              </label>
+              <label className="block text-sm font-medium mb-2">Special Instructions</label>
               <textarea
                 name="special_instruction"
                 value={formData.special_instruction}
@@ -344,9 +362,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
-                Base Content
-              </label>
+              <label className="block text-sm font-medium mb-2">Base Content</label>
               <textarea
                 name="BASE_CONTENT"
                 value={formData.BASE_CONTENT}
@@ -392,13 +408,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
                     >
                       {tag}
                       <button type="button" onClick={() => removeTag(tag)} className="ml-2 focus:outline-none">
-                        <svg
-                          className="w-4 h-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
@@ -417,7 +427,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
                 onChange={handleInputChange}
                 placeholder="e.g. Hands on practice"
                 rows={4}
-                className="w-full bg-[#0D0D0D] border border-[#2F343C] rounded-lg px-2 py-2 text-white focus:border-[#7DB8FF] focus:outline-none text-sm"
+                className="w-full bg-[#0D0D0D] border border-[#2F343C] rounded-lg px-3 py-2 text-white placeholder-[#ADAEBC] focus:border-[#7DB8FF] focus:outline-none text-sm"
               />
             </div>
             <div>
@@ -478,7 +488,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
           type="submit"
           className="w-full bg-[#0296E0] text-black font-medium py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-transform duration-200 hover:scale-105 "
         >
-          <img src={generateIcon} alt="logo"/>
+          <img src={generateIcon} alt="logo" />
           <span>Generate Questions</span>
         </button>
       </form>

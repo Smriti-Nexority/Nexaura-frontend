@@ -602,12 +602,7 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
 
             if (!parseSuccess) {
               console.log('All parsing strategies failed, using final fallback');
-              parsedQuestions = [{ 
-                QuestionStem: 'Parsing Error', 
-                Options: ['Please regenerate questions'], 
-                CorrectAnswer: 'N/A',
-                Explanation: 'The API response could not be parsed properly.'
-              }];
+             
               scenarioText = `Parsing Error - Unable to extract questions from API 
                 Try regenerating questions `;
             }
@@ -809,25 +804,7 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
           <div className="p-4 bg-red-900/20 border border-red-500 rounded-md">
             <p className="text-red-400 font-semibold mb-2">Error Loading Questions</p>
             <pre className="text-red-300 text-sm mb-3 whitespace-pre-wrap">{error}</pre>
-            {debugInfo && (
-              <details className="text-xs text-red-200">
-                <summary className="cursor-pointer hover:text-red-100 mb-2">🔍 Debug Information</summary>
-                <div className="mt-2 p-2 bg-red-900/30 rounded font-mono text-xs overflow-x-auto whitespace-pre-wrap">
-                  {debugInfo}
-                </div>
-              </details>
-            )}
-            <div className="mt-3 p-2 bg-blue-900/20 border-l-4 border-blue-400 rounded">
-              <p className="text-blue-200 text-sm">
-                <strong>💡 Quick fixes:</strong>
-                <br />• Check your internet connection
-                <br />• Verify API is running: <code className="bg-blue-800 px-1 rounded">
-                  curl {import.meta.env.DEV ? '/api' : 'https://x3sjgoquc2.execute-api.ap-south-1.amazonaws.com/dev'}
-                </code>
-                <br />• Try regenerating questions
-                {!import.meta.env.DEV && <><br />• Ensure CORS is enabled on API Gateway</>}
-              </p>
-            </div>
+            
           </div>
         ) : questions.length === 0 ? (
           <p className="text-sm text-gray-400">
