@@ -26,7 +26,7 @@ const Navbar = ({ onFileUpload }) => {
       <div className="w-full max-w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between py-4 lg:py-6 gap-4">
           <div className="flex gap-3 flex-shrink-0">
-            <img src={nexaura} alt="logo" className="w-8 h-7 sm:w-[33.62px] sm:h-[29.07px]" />
+            <img src={nexaura} alt="logo" className="w-[33.62px] h-[29.07px]" />
             <h2 className="font-readex font-semibold text-xl sm:text-2xl lg:text-[28px] leading-tight tracking-tight text-[#2E8CFF]">
               NEXAURA
             </h2>
@@ -61,7 +61,7 @@ const Navbar = ({ onFileUpload }) => {
             </div>
           </div>
           <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
-            <div className="flex items-center bg-[#0D0D0D] px-4 py-2 rounded-2xl border border-[#282828] w-full max-w-[min(80vw,320px)]">
+            <div className="flex items-center bg-[#0D0D0D] px-4 py-2 rounded-2xl border border-[#282828] w-80">
               <Search size={20} className="text-white mr-2" />
               <input
                 type="text"
@@ -113,13 +113,24 @@ const Navbar = ({ onFileUpload }) => {
                 Upload
               </button>
             </div>
-            <div className="flex items-center bg-[#0D0D0D] px-4 py-2 rounded-2xl border border-[#282828] w-full max-w-[min(90vw,280px)]">
+            <div className="flex items-center bg-[#0D0D0D] px-4 py-2 rounded-2xl border border-[#282828] w-full max-w-[280px]">
               <Search size={20} className="text-white mr-2" />
               <input
                 type="text"
                 placeholder="Search anything here..."
                 className="bg-transparent text-white placeholder-gray-400 focus:outline-none flex-1"
               />
+            </div>
+            <button className="flex items-center justify-center bg-[#0D0D0D] border border-[#282828] rounded-2xl w-12 h-12 hover:bg-[#1a1a1a] transition-colors">
+              <Bell size={20} />
+            </button>
+            <div className="flex items-center justify-between bg-[#0D0D0D] border border-[#282828] rounded-[6px] w-[100px] h-12 hover:bg-[#1a1a1a] transition-colors">
+              <img
+                className="w-12 h-12 object-cover rounded-[6px]"
+                src={profile}
+                alt="profile"
+              />
+              <ChevronDown size={20} className="text-white mr-3" />
             </div>
           </div>
         )}
