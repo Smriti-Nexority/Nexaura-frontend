@@ -47,10 +47,7 @@ const Navbar = ({ onFileUpload }) => {
                 />
                 Subject
               </div>
-              <div className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer">
-                <img src={chart} alt="subject" />
-                Text
-              </div>
+             
               <button
                 onClick={handleUploadClick}
                 className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer upload-button"

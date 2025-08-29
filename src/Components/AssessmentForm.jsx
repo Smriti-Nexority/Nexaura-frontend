@@ -79,9 +79,10 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
           externalFormData.description ||
           prev.learning_objective ||
           (questionCategory === 'scenario-based' ? 'Understand nutritional requirements in clinical scenarios' : 'Hands on practice'),
-        Focus_Area: externalFormData.Focus_Area || externalFormData.topic || prev.Focus_Area || (questionCategory === 'scenario-based' ? 'Animal Nutrition' : ''),
+        Focus_Area: externalFormData.Focus_Area || externalFormData.topic || prev.Focus_Area || (questionCategory === 'scenario-based' ? '' : ''),
         BASE_CONTENT: externalFormData.BASE_CONTENT || externalFormData.base_content || prev.BASE_CONTENT || '',
-        tags: Array.isArray(externalFormData.tags) ? externalFormData.tags : prev.tags, // keep tags if provided externally
+        tags: Array.isArray(externalFormData.tags) ? externalFormData.tags : prev.tags,
+         // keep tags if provided externally
       }));
     }
   }, [externalFormData, questionCategory]);
