@@ -3,9 +3,11 @@
 import React, { useState, useRef } from 'react';
 // Import pdfjs-dist legacy build for v4.x compatibility
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 // Set workerSrc to exact matching version on CDN without query parameters
-pdfjsLib.GlobalWorkerOptions.workerSrc = '../node_modules/pdfjs-dist/build/pdf.worker.min.mjs';
+// pdfjsLib.GlobalWorkerOptions.workerSrc = '../node_modules/pdfjs-dist/build/pdf.worker.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 import Sidebar from './Components/sidebar';
 import Navbar from './Components/Navbar';
