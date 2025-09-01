@@ -358,8 +358,8 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
                 .join(',') || 'Medium'
             : 'Medium'),
         BASE_CONTENT: formData.BASE_CONTENT || formData.base_content || '',
-        Scenarios: formData.Scenarios || (isCaseBased ? '1' : undefined),
-        Questions_per_Scenario: formData.Questions_per_Scenario || formData.max_question || (isCaseBased ? 4 : undefined),
+        Scenarios: formData.Scenarios || (isCaseBased ? '2' : undefined),
+        Questions_per_Scenario: formData.Questions_per_Scenario || formData.max_question || (isCaseBased ? 5 : undefined),
         Learner_Level: formData.Learner_Level || (isCaseBased ? 'Advanced' : undefined),
         special_instruction: formData.special_instruction || (isCaseBased ? 'Include realistic clinical situations and avoid overly simplistic wording.' : ''),
         learning_objective: formData.learning_objective || formData.description || 'Hands on practice',
@@ -683,7 +683,7 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
             console.warn(`Retrying in ${delay}ms... (${i + 2}/${retries})`);
             await new Promise((resolve) => setTimeout(resolve, delay));
           } else {
-            const finalError = `${errorMessage}${debugDetails ? '\n\n🔧 ' + debugDetails : ''}`;
+            const finalError = `${errorMessage}${debugDetails ? '\n\n ' + debugDetails : ''}`;
             setError(finalError);
             setDebugInfo(`
                Final Error Details:

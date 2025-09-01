@@ -1,12 +1,10 @@
-// App.jsx
-
+// App.js
 import React, { useState, useRef } from 'react';
-// Import pdfjs-dist legacy build for v4.x compatibility
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import mammoth from 'mammoth';
+import JSZip from 'jszip';
 
-// Set workerSrc to exact matching version on CDN without query parameters
-// pdfjsLib.GlobalWorkerOptions.workerSrc = '../node_modules/pdfjs-dist/build/pdf.worker.min.mjs';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 import Sidebar from './Components/sidebar';
@@ -43,7 +41,21 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false);
   const fileRef = useRef(null);
 
-  // PDF text extraction with detailed logging and error handling
+  // Function to derive Focus_Area and tags from extracted text
+  const deriveFocusArea = (text) => {
+    const stopwords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'];
+    const words = text.toLowerCase().match(/\b\w+\b/g) || [];
+    const freq = {};
+    words.forEach(word => {
+      if (!stopwords.includes(word) && word.length > 3) {
+        freq[word] = (freq[word] || 0) + 1;
+      }
+    });
+    const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+    return sorted.slice(0, 3).map(([word]) => word.charAt(0).toUpperCase() + word.slice(1)).join(', ') || 'General';
+  };
+
+  // Extract text from PDF
   async function extractPdfText(file) {
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -71,7 +83,50 @@ const App = () => {
     }
   }
 
-  // File upload handler - extracts text and sets formData
+  // Extract text from Word (.docx)
+  async function extractWordText(file) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      const textContent = result.value;
+      if (!textContent.trim()) {
+        console.warn('Word document extraction returned empty content.');
+        return 'Warning: Extracted Word content is empty or unreadable.';
+      }
+      return textContent;
+    } catch (error) {
+      console.error('Word text extraction error:', error);
+      return `Error: Unable to extract text from Word document - ${error.message || error}`;
+    }
+  }
+
+  // Extract text from PowerPoint (.pptx)
+  async function extractPptText(file) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const zip = await JSZip.loadAsync(arrayBuffer);
+      let textContent = '';
+      const slideFiles = Object.keys(zip.files).filter(file => file.match(/^ppt\/slides\/slide\d+\.xml$/));
+      for (const slideFile of slideFiles) {
+        const xmlContent = await zip.file(slideFile).async('string');
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlContent, 'application/xml');
+        const textNodes = xmlDoc.getElementsByTagName('a:t');
+        for (let i = 0; i < textNodes.length; i++) {
+          textContent += textNodes[i].textContent + ' ';
+        }
+      }
+      if (!textContent.trim()) {
+        console.warn('PowerPoint extraction returned empty content.');
+        return 'Warning: Extracted PowerPoint content is empty or unreadable.';
+      }
+      return textContent;
+    } catch (error) {
+      console.error('PowerPoint text extraction error:', error);
+      return `Error: Unable to extract text from PowerPoint - ${error.message || error}`;
+    }
+  }
+
   const handleFileUpload = async (file, isCaseBased, isSubjectChecked, showModalFlag) => {
     if (showModalFlag) {
       setShowModal(true);
@@ -82,31 +137,64 @@ const App = () => {
       return;
     }
     if (file) {
-      if (file.type !== 'application/pdf') {
-        alert('Only PDF files are supported for text extraction.');
+      const validFileTypes = [
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      ];
+      if (!validFileTypes.includes(file.type)) {
+        alert('Only PDF, Word (.docx), and PowerPoint (.pptx) files are supported.');
         return;
       }
       setIsLoading(true);
       try {
-        let extractedText = await extractPdfText(file);
+        let extractedText;
+        if (file.type === 'application/pdf') {
+          extractedText = await extractPdfText(file);
+        } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+          extractedText = await extractWordText(file);
+        } else if (file.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+          extractedText = await extractPptText(file);
+        }
         if (
           !extractedText ||
           extractedText.length < 20 ||
           extractedText.toLowerCase().startsWith('error') ||
           extractedText.toLowerCase().startsWith('warning')
         ) {
-          alert('The uploaded PDF could not be parsed properly. Please upload a valid text-based PDF.');
+          alert('The uploaded file could not be parsed properly.');
+          setIsLoading(false);
           return;
         }
-        let topic = '';
-        const firstLine = extractedText.split('\n')[0];
-        if (firstLine && firstLine.length < 80) {
-          topic = firstLine;
-        }
-        const defaultParams = {
-          subject: 'Mathematics',
-          tags: ['triangle'],
-          topic,
+        const derivedFocus = deriveFocusArea(extractedText);
+        const defaultParams = isCaseBased ? {
+          subject: derivedFocus.split(', ')[0] || 'Animal Nutrition',
+          tags: derivedFocus.split(', ').filter(Boolean),
+          topic: derivedFocus,
+          question_type: 'Case-based MCQ',
+          questionType: 'case-based',
+          max_question: formData.Scenarios * formData.numQuestions || 8,
+          numQuestions: formData.numQuestions || 5,
+          blooms_taxonomy: 'Apply',
+          difficulty_level: 'Hard',
+          learning_objective: 'Understand nutritional requirements in clinical scenarios',
+          grade: 'Advanced',
+          BASE_CONTENT: extractedText,
+          difficulty: { easy: false, medium: false, hard: true },
+          description: 'Include realistic clinical situations',
+          bloomsTaxonomy: 'Apply',
+          title: '',
+          totalMarks: '',
+          totalTime: '',
+          Scenarios: formData.Scenarios || 2,
+          Questions_per_Scenario: formData.numQuestions || 4,
+          Learner_Level: 'Advanced',
+          special_instruction: 'Include realistic clinical situations.',
+          Focus_Area: derivedFocus,
+        } : {
+          subject: derivedFocus.split(', ')[0] || 'Mathematics',
+          tags: derivedFocus.split(', ').filter(Boolean),
+          topic: derivedFocus,
           question_type: simpleQuestionType,
           questionType: simpleQuestionType,
           max_question: 6,
@@ -123,7 +211,7 @@ const App = () => {
           totalMarks: '',
           totalTime: '',
         };
-        console.log('Setting formData with extracted base_content:', extractedText.substring(0, 200));
+        console.log('Setting formData with extracted content:', defaultParams);
         setFormData(defaultParams);
         setTrigger(Date.now());
       } finally {
@@ -133,20 +221,23 @@ const App = () => {
   };
 
   const handleModalSelect = (category) => {
+    const extractedContent = formData.base_content || formData.BASE_CONTENT || '';
+    const derivedFocus = extractedContent ? deriveFocusArea(extractedContent) : (category === 'scenario-based' ? 'Animal Nutrition' : 'General');
     const newFormData = {
       ...formData,
       questionType: category === 'scenario-based' ? 'case-based' : simpleQuestionType,
       Question_Style: category === 'scenario-based' ? 'Case-based MCQ' : simpleQuestionType,
-      Scenarios: category === 'scenario-based' ? '1' : undefined,
+      Scenarios: formData.Scenarios || (category === 'scenario-based' ? 1 : undefined),
+      Questions_per_Scenario: formData.numQuestions || (category === 'scenario-based' ? 4 : undefined),
       Learner_Level: category === 'scenario-based' ? scenarioLearnerLevel : undefined,
       special_instruction:
-        category === 'scenario-based' ? 'Include realistic clinical situations...' : undefined,
-      max_question: category === 'scenario-based' ? 4 : 6,
-      numQuestions: category === 'scenario-based' ? 4 : 6,
-      subject: category === 'scenario-based' ? 'Animal Nutrition' : 'Mathematics',
-      Focus_Area: category === 'scenario-based' ? '' : '',
-      topic: category === 'scenario-based' ? 'Animal Nutrition' : '',
-      tags: category === 'scenario-based' ? ['Animal Nutrition'] : ['triangle'],
+        category === 'scenario-based' ? 'Include realistic clinical situations.' : undefined,
+      max_question: category === 'scenario-based' ? (formData.Scenarios || 1) * (formData.numQuestions || 4) : 6,
+      numQuestions: formData.numQuestions || (category === 'scenario-based' ? 4 : 6),
+      subject: category === 'scenario-based' ? (derivedFocus.split(', ')[0] || 'Animal Nutrition') : (derivedFocus.split(', ')[0] || 'Mathematics'),
+      Focus_Area: derivedFocus,
+      topic: derivedFocus,
+      tags: derivedFocus.split(', ').filter(Boolean),
       difficulty_level: category === 'scenario-based' ? 'Hard' : 'Medium',
       difficulty:
         category === 'scenario-based'
@@ -156,9 +247,10 @@ const App = () => {
         category === 'scenario-based'
           ? 'Understand nutritional requirements...'
           : 'Hands on practice',
-      BASE_CONTENT: category === 'scenario-based' ? '' : '',
-      base_content: category === 'scenario-based' ? '' : '',
+      BASE_CONTENT: category === 'scenario-based' ? extractedContent : '',
+      base_content: category !== 'scenario-based' ? extractedContent : '',
     };
+    console.log('handleModalSelect formData:', newFormData);
     setFormData(newFormData);
     setQuestionCategory(category);
     setShowModal(false);
@@ -170,7 +262,7 @@ const App = () => {
       <Navbar onFileUpload={handleFileUpload} />
       {isLoading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="text-white text-lg">Loading PDF...</div>
+          <div className="text-white text-lg">Loading file...</div>
         </div>
       )}
       {showModal && (

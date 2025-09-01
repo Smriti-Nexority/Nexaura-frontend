@@ -3,7 +3,7 @@ import generateIcon from './Components_assets/Generate.svg';
 
 const defaultSimpleFormData = {
   subject: 'Mathematics',
-  tags: [], // start empty, subject is separate
+  tags: [],
   questionType: 'multiple-choice',
   question_type: 'multiple-choice',
   numQuestions: 6,
@@ -36,13 +36,13 @@ const defaultScenarioFormData = {
   title: 'Assessment Craft',
   totalMarks: '',
   totalTime: '',
-  Focus_Area: 'Animal Nutrition',
+  Focus_Area: '',
   max_question: 4,
   blooms_taxonomy: 'Apply',
   difficulty_level: 'Hard',
   BASE_CONTENT: '',
   learning_objective: 'Understand nutritional requirements in clinical scenarios',
-  Scenarios: '1',
+  Scenarios: '2', 
   Learner_Level: 'Advanced',
   special_instruction: 'Include realistic clinical situations and avoid overly simplistic wording.',
 };
@@ -77,13 +77,14 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
         learning_objective:
           externalFormData.learning_objective ||
           externalFormData.description ||
-          prev.learning_objective ||
+          externalFormData.learning_objective ||
           (questionCategory === 'scenario-based' ? 'Understand nutritional requirements in clinical scenarios' : 'Hands on practice'),
-        Focus_Area: externalFormData.Focus_Area || externalFormData.topic || prev.Focus_Area || (questionCategory === 'scenario-based' ? '' : ''),
+        Focus_Area: externalFormData.Focus_Area || externalFormData.topic || prev.Focus_Area || '',
         BASE_CONTENT: externalFormData.BASE_CONTENT || externalFormData.base_content || prev.BASE_CONTENT || '',
         tags: Array.isArray(externalFormData.tags) ? externalFormData.tags : prev.tags,
-         // keep tags if provided externally
+        Scenarios: externalFormData.Scenarios || prev.Scenarios || '2', // Default to 2
       }));
+      console.log('AssessmentForm useEffect - Scenarios:', externalFormData.Scenarios || formData.Scenarios || '2');
     }
   }, [externalFormData, questionCategory]);
 
@@ -95,7 +96,9 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
     }
     if (questionCategory === 'scenario-based') {
       if (!formData.Scenarios || parseInt(formData.Scenarios) < 1) newErrors.Scenarios = 'At least one scenario is required';
+      if (parseInt(formData.Scenarios) > 5) newErrors.Scenarios = 'Maximum 5 scenarios allowed';
       if (!formData.numQuestions || parseInt(formData.numQuestions) < 1) newErrors.numQuestions = 'At least one question per scenario is required';
+      if (parseInt(formData.numQuestions) > 20) newErrors.numQuestions = 'Maximum 20 questions per scenario allowed'; // Increased to 20
       if (!formData.BASE_CONTENT) newErrors.BASE_CONTENT = 'Base content is required';
       if (!formData.Learner_Level) newErrors.Learner_Level = 'Learner level is required';
       if (!formData.learning_objective) newErrors.learning_objective = 'Learning objective is required';
@@ -103,6 +106,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
     } else {
       if (!formData.questionType) newErrors.questionType = 'Question type is required';
       if (!formData.numQuestions || parseInt(formData.numQuestions) < 1) newErrors.numQuestions = 'At least one question is required';
+      if (parseInt(formData.numQuestions) > 50) newErrors.numQuestions = 'Maximum 50 questions allowed';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -112,7 +116,6 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
     const { name, value } = e.target;
 
     if (name === 'subject') {
-      // On subject change, reset tags to empty, let user add tags explicitly
       setFormData((prev) => ({
         ...prev,
         subject: value,
@@ -122,9 +125,12 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
     } else {
       setFormData((prev) => ({
         ...prev,
-        [name]: value,
+        [name]: name === 'Scenarios' || name === 'numQuestions' ? parseInt(value) || (name === 'Scenarios' ? '2' : '4') : value,
         ...(name === 'questionType' ? { Question_Style: value === 'case-based' ? 'Case-based MCQ' : value } : {}),
       }));
+    }
+    if (name === 'Scenarios' || name === 'numQuestions') {
+      console.log(`${name} input changed to:`, parseInt(value) || (name === 'Scenarios' ? '2' : '4'));
     }
 
     setErrors((prev) => ({ ...prev, [name]: '' }));
@@ -200,7 +206,6 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
       questionTypeForApi = questionCategory === 'scenario-based' ? 'Case-based MCQ' : '6 MCQs';
     }
 
-    // Combine subject and tags explicitly for Focus_Area in payload
     const combinedFocusArea = [formData.subject, ...formData.tags].filter(Boolean).join(',');
 
     const payload = {
@@ -209,6 +214,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
       tags: formData.tags,
       Question_Style: questionTypeForApi,
       questionType: formData.questionType,
+      num_scenarios: parseInt(formData.Scenarios) || 2, // Ensure correct Scenarios value
       max_question: totalQuestions,
       Questions_per_Scenario: questionCategory === 'scenario-based' ? totalQuestions : undefined,
       blooms_taxonomy: bloomsTaxonomyForApi || 'Apply',
@@ -218,12 +224,12 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
       BASE_CONTENT: formData.BASE_CONTENT || '',
       ...(questionCategory === 'scenario-based'
         ? {
-            Scenarios: formData.Scenarios,
+            Scenarios: parseInt(formData.Scenarios) || 2,
             Learner_Level: formData.Learner_Level,
             special_instruction: formData.special_instruction,
           }
         : {}),
-      file_content: formData.file_content || undefined,
+      file_content: formData.file_content || formData.BASE_CONTENT || '',
     };
 
     console.log('Generated payload:', JSON.stringify(payload, null, 2));
@@ -231,7 +237,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
   };
 
   return (
-    <div className="bg-[#0D0D0D] rounded-xl p-6 text-white w-full max-w-sm mx-auto my-4 border border-[#7DB8FF] ">
+    <div className="bg-[#0D0D0D] rounded-xl p-6 text-white w-full max-w-sm mx-auto my-4 border border-[#7DB8FF]">
       <form onSubmit={handleSubmit} className="space-y-6">
         {showFileInput && (
           <div>
@@ -245,9 +251,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
           </div>
         )}
         <div>
-          <label className="block text-sm font-medium mb-2">
-            Assessment Title
-          </label>
+          <label className="block text-sm font-medium mb-2">Assessment Title</label>
           <input
             type="text"
             name="title"
@@ -317,6 +321,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
                 value={formData.Scenarios || '1'}
                 onChange={handleInputChange}
                 min="1"
+                max="5"
                 className="w-full bg-[#0D0D0D] border border-[#2F343C] rounded-lg px-2 py-2 text-white focus:border-[#7DB8FF] focus:outline-none text-sm"
               />
               {errors.Scenarios && <p className="text-red-400 text-sm mt-1">{errors.Scenarios}</p>}
@@ -331,7 +336,7 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
                 value={formData.numQuestions}
                 onChange={handleInputChange}
                 min="1"
-                max="10"
+                max="20" // Increased to 20
                 className="w-full bg-[#0D0D0D] border border-[#2F343C] rounded-lg px-2 py-2 text-white focus:border-[#7DB8FF] focus:outline-none text-sm"
               />
               {errors.numQuestions && <p className="text-red-400 text-sm mt-1">{errors.numQuestions}</p>}
@@ -350,7 +355,6 @@ const AssessmentForm = ({ onGenerate, externalFormData, questionCategory, showFi
               />
               {errors.Focus_Area && <p className="text-red-400 text-sm mt-1">{errors.Focus_Area}</p>}
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-2">Special Instructions</label>
               <textarea
