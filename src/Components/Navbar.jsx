@@ -5,12 +5,14 @@ import profile from './Components_assets/img.jpg';
 import chart from './Components_assets/chart-bar-line.svg';
 import file from './Components_assets/file-02.svg';
 
-const Navbar = ({ onFileUpload, onShowModal, onToggleFileInput }) => {
+const Navbar = ({ onFileUpload, onShowModal, onToggleFileInput, onSubjectCheckboxChange }) => {
   const [isChecked, setIsChecked] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleCheckboxChange = (event) => {
-    setIsChecked(event.target.checked);
+    const checked = event.target.checked;
+    setIsChecked(checked);
+    onSubjectCheckboxChange(checked); // Notify parent of checkbox state
   };
 
   const toggleMobileMenu = () => {
@@ -54,7 +56,6 @@ const Navbar = ({ onFileUpload, onShowModal, onToggleFileInput }) => {
                 <img src={file} alt="question-type" />
                 Upload
               </button>
-              
             </div>
           </div>
           <div className="hidden lg:flex items-center gap-4 flex-shrink-0">

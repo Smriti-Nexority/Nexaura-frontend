@@ -37,16 +37,16 @@ const App = () => {
     Focus_Area: '',
     BASE_CONTENT: '',
   });
-  const [showModal, setShowModal] = useState(false); // Modal hidden on load
-  const [questionCategory, setQuestionCategory] = useState('simple'); // Default to simple questions
+  const [showModal, setShowModal] = useState(false);
+  const [questionCategory, setQuestionCategory] = useState('simple');
   const [trigger, setTrigger] = useState(0);
-  const [showFileInput, setShowFileInput] = useState(false); // File input hidden by default
+  const [showFileInput, setShowFileInput] = useState(false);
   const [simpleQuestionType, setSimpleQuestionType] = useState('multiple-choice');
   const [scenarioLearnerLevel, setScenarioLearnerLevel] = useState('Advanced');
   const [isLoading, setIsLoading] = useState(false);
   const fileRef = useRef(null);
 
-  // Function to derive Focus_Area and tags from text (file or form input)
+  // Function to derive Focus_Area and tags from text
   const deriveFocusArea = (text) => {
     if (!text || typeof text !== 'string') return 'General';
     const stopwords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'];
@@ -226,7 +226,7 @@ const App = () => {
     setShowFileInput(true); // Show file input after upload
   };
 
-  const handleModalSelect = (category) => {
+  const handleModalSelect = (category, showFileInput = true) => {
     const extractedContent = formData.base_content || formData.BASE_CONTENT || 'Animals require a balanced diet for optimal health. Nutritional needs vary by species, age, activity level, and health condition.';
     const derivedFocus = deriveFocusArea(extractedContent);
     const newFormData = {
@@ -253,11 +253,20 @@ const App = () => {
     setFormData(newFormData);
     setQuestionCategory(category);
     setShowModal(false);
-    setShowFileInput(true); // Show file input after selecting question type
-    setTrigger(Date.now()); // Trigger question generation
+    if (showFileInput) {
+      setShowFileInput(true); // Only show file input if explicitly allowed
+    }
+    setTrigger(Date.now());
   };
 
-  // Function to trigger modal manually (e.g., from Navbar)
+  // Handle subject checkbox change
+  const handleSubjectCheckboxChange = (isChecked) => {
+    if (isChecked) {
+      handleModalSelect('simple', false); // Switch to simple question type without showing file input
+    }
+  };
+
+  // Function to trigger modal manually
   const handleShowModal = () => {
     setShowModal(true);
   };
@@ -269,7 +278,12 @@ const App = () => {
 
   return (
     <>
-      <Navbar onFileUpload={handleFileUpload} onShowModal={handleShowModal} onToggleFileInput={handleToggleFileInput} />
+      <Navbar
+        onFileUpload={handleFileUpload}
+        onShowModal={handleShowModal}
+        onToggleFileInput={handleToggleFileInput}
+        onSubjectCheckboxChange={handleSubjectCheckboxChange}
+      />
       {isLoading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="text-white text-lg">Loading...</div>
@@ -294,7 +308,7 @@ const App = () => {
                     <option value="multiple-choice,fill-in-the-blanks">Multiple Choice & Fill-in-the-Blanks</option>
                   </select>
                   <button
-                    onClick={() => handleModalSelect('simple')}
+                    onClick={() => handleModalSelect('simple', true)} // Show file input when selecting from modal
                     className="bg-blue-300 text-black font-medium py-2 px-4 rounded-md hover:bg-[#2E8CFF] active:bg-[#0278C0] transition-colors duration-200 choose-button"
                     aria-label="Select Simple Questions"
                   >
@@ -316,7 +330,7 @@ const App = () => {
                     <option value="Advanced">Advanced</option>
                   </select>
                   <button
-                    onClick={() => handleModalSelect('scenario-based')}
+                    onClick={() => handleModalSelect('scenario-based', true)} // Show file input when selecting from modal
                     className="bg-blue-300 text-black font-medium py-2 px-4 rounded-md hover:bg-[#2E8CFF] active:bg-[#0278C0] transition-colors duration-200 choose-button"
                     aria-label="Select Scenario-Based Questions"
                   >

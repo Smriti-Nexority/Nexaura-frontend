@@ -409,7 +409,7 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
               body = JSON.parse(responseData.body);
               console.log('Parsed AWS Lambda response body');
             } catch (parseError) {
-              throw new Error(`Failed to parse AWS Lambda response body JSON: ${parseError.message}`);
+              throw new Error(`Failed to parse response body JSON: ${parseError.message}`);
             }
           }
           else if (typeof responseData === 'object') {
@@ -819,9 +819,8 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
           </div>
         ) : error ? (
           <div className="p-4 bg-red-900/20 border border-red-500 rounded-md">
-            <p className="text-red-400 font-semibold mb-2">Error Loading Questions</p>
-            <pre className="text-red-300 text-sm mb-3 whitespace-pre-wrap">{error}</pre>
-            <pre className="text-red-300 text-sm whitespace-pre-wrap">{debugInfo}</pre>
+            <p className="text-red-400 font-semibold mb-2">Error Loading Questions please regenerate again</p>
+            
           </div>
         ) : questions.length === 0 ? (
           <p className="text-sm text-gray-400">
