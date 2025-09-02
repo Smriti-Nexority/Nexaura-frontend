@@ -318,7 +318,7 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
     const controller = new AbortController();
     let isMounted = true;
 
-    const fetchQuestions = async (retries = 3, baseDelay = 1000) => {
+    const fetchQuestions = async (retries = 5, baseDelay = 1000) => {
       if (!isMounted) return;
 
       setLoading(true);
@@ -429,48 +429,47 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
           }
 
           if (body.error || body.errorMessage || body.message?.includes('error')) {
+            console.log('API Error Details:', body);
             throw new Error(`API returned an error: ${body.error || body.errorMessage || body.message}`);
           }
 
-          let questionsString = body.questions || body.Questions || body.data?.questions;
+          let questionsString = body.questions || body.Questions || body.data?.questions || body.data?.Questions;
           let scenarioText = '';
           let parsedQuestions = [];
 
-          console.log('Questions extraction:');
-          console.log('- Type:', typeof questionsString);
-          console.log('- Length:', questionsString?.length);
-          console.log('- First 500 chars:', questionsString?.substring(0, 500) || 'N/A');
+          console.log('Questions extraction:', { questionsString, type: typeof questionsString });
 
-          setDebugInfo(`
-             Debug Information:
-            - Environment: ${import.meta.env.DEV ? 'Development' : 'Production'}
-            - Mode: ${import.meta.env.MODE}
-            - API URL: ${apiUrl}
-            - Response Type: ${typeof responseData}
-            - Questions Type: ${typeof questionsString}
-            - Questions Length: ${questionsString?.length || 0}
-            - Timestamp: ${new Date().toISOString()}
-          `);
-
-          if (typeof questionsString === 'string') {
-            let cleanedString = questionsString;
+          // Handle array response
+          if (Array.isArray(body)) {
+            parsedQuestions = body;
+            console.log('Using body as questions array');
+          } else if (Array.isArray(questionsString)) {
+            parsedQuestions = questionsString;
+            console.log('Using questionsString as questions array');
+          } else if (questionsString && typeof questionsString === 'object') {
+            if (questionsString.Scenario && questionsString.Questions) {
+              scenarioText = questionsString.Scenario;
+              parsedQuestions = questionsString.Questions;
+              console.log('Using object with Scenario and Questions');
+            } else {
+              parsedQuestions = [questionsString];
+              console.log('Using single question object');
+            }
+          } else if (typeof questionsString === 'string') {
+            let cleanedString = questionsString
+              .trim()
+              .replace(/^\uFEFF/, '') // Remove BOM
+              .replace(/```json/g, '') // Remove ```json
+              .replace(/```/g, '')    // Remove ```
+              .replace(/^"/, '')      // Remove leading quote
+              .replace(/"$/, '')      // Remove trailing quote
+              .replace(/\\"/g, '"')   // Unescape quotes
+              .replace(/\\\\/g, '\\') // Unescape backslashes
+              .replace(/\\n/g, '')    // Remove newlines
+              .replace(/\\r/g, '');   // Remove carriage returns
             
             console.log('Step 1 - Original:', cleanedString.substring(0, 100));
-            
-            cleanedString = cleanedString
-              .trim()
-              .replace(/^\uFEFF/, '')
-              .replace(/``````/g, '')
-              .replace(/^"/, '').replace(/"$/, '');
-              
             console.log('Step 2 - After wrapper removal:', cleanedString.substring(0, 100));
-            
-            cleanedString = cleanedString
-              .replace(/\\"/g, '"')
-              .replace(/\\\\/g, '\\')
-              .replace(/\\n/g, '')
-              .replace(/\\r/g, '');
-              
             console.log('Step 3 - After unescaping:', cleanedString.substring(0, 100));
 
             let parseSuccess = false;
@@ -585,8 +584,9 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
                     tempQuestions.push(currentQuestion);
                   }
                   
-                 
+                  currentQuestion = {}; // Reset for new question
                 }
+                // Add more parsing logic here if needed for specific fields
               }
               if (Object.keys(currentQuestion).length > 0) {
                 tempQuestions.push(currentQuestion);
@@ -602,27 +602,44 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
 
             if (!parseSuccess) {
               console.log('All parsing strategies failed, using final fallback');
-             
               scenarioText = `Parsing Error - Unable to extract questions from API 
                 Try regenerating questions `;
             }
 
-          } else if (Array.isArray(questionsString)) {
-            parsedQuestions = questionsString;
-            console.log('Using array of questions directly');
-          } else if (questionsString && typeof questionsString === 'object') {
-            if (questionsString.Scenario && questionsString.Questions) {
-              scenarioText = questionsString.Scenario;
-              parsedQuestions = questionsString.Questions;
-              console.log('Using object with Scenario and Questions');
-            } else {
-              parsedQuestions = [questionsString];
-              console.log('Using single question object');
-            }
           }
 
+          console.log('Failed to parse questions. Raw response:', response.data);
+          console.log('Questions string:', questionsString);
+          console.log('Parsed questions:', parsedQuestions);
+
+          console.log('Questions extraction:');
+          console.log('- Type:', typeof questionsString);
+          console.log('- Length:', questionsString?.length);
+          console.log('- First 500 chars:', questionsString?.substring(0, 500) || 'N/A');
+
+          setDebugInfo(`
+             Debug Information:
+            - Environment: ${import.meta.env.DEV ? 'Development' : 'Production'}
+            - Mode: ${import.meta.env.MODE}
+            - API URL: ${apiUrl}
+            - Response Type: ${typeof responseData}
+            - Questions Type: ${typeof questionsString}
+            - Questions Length: ${questionsString?.length || 0}
+            - Timestamp: ${new Date().toISOString()}
+          `);
+
           if (!Array.isArray(parsedQuestions) || parsedQuestions.length === 0) {
-            throw new Error('No valid questions could be extracted from the response');
+            setError(`No valid questions could be extracted. Raw response: ${JSON.stringify(response.data).substring(0, 200)}...`);
+            setDebugInfo(`
+              Debug Information:
+              - Environment: ${import.meta.env.DEV ? 'Development' : 'Production'}
+              - API URL: ${apiUrl}
+              - Response Type: ${typeof responseData}
+              - Questions String: ${questionsString?.substring(0, 200) || 'N/A'}
+              - Timestamp: ${new Date().toISOString()}
+            `);
+            setLoading(false);
+            return;
           }
 
           const updatedQuestions = parsedQuestions.map((q, index) => ({
@@ -804,7 +821,7 @@ if (q.CorrectAnswer && q.CorrectAnswer !== 'N/A') {
           <div className="p-4 bg-red-900/20 border border-red-500 rounded-md">
             <p className="text-red-400 font-semibold mb-2">Error Loading Questions</p>
             <pre className="text-red-300 text-sm mb-3 whitespace-pre-wrap">{error}</pre>
-            
+            <pre className="text-red-300 text-sm whitespace-pre-wrap">{debugInfo}</pre>
           </div>
         ) : questions.length === 0 ? (
           <p className="text-sm text-gray-400">

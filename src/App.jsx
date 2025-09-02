@@ -1,4 +1,3 @@
-// App.js
 import React, { useState, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -7,7 +6,7 @@ import JSZip from 'jszip';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
-import Sidebar from './Components/sidebar';
+import Sidebar from './Components/Sidebar';
 import Navbar from './Components/Navbar';
 import AssessmentDashboard from './Components/AssessmentDashboard';
 
@@ -24,25 +23,32 @@ const App = () => {
     difficulty_level: 'Medium',
     learning_objective: 'Hands on practice',
     grade: '7',
-    base_content: '',
+    base_content: 'Animals require a balanced diet for optimal health. Nutritional needs vary by species, age, activity level, and health condition. Common deficiencies include lack of protein, calcium, and vitamins. Overfeeding can lead to obesity, which increases the risk of joint problems and diabetes. For example, working dogs may require high-protein diets, while senior cats often need reduced-calorie meals.',
     difficulty: { easy: false, medium: true, hard: false },
     description: 'Hands on practice',
     bloomsTaxonomy: 'Applying',
     title: '',
     totalMarks: '',
     totalTime: '',
+    Scenarios: 1,
+    Questions_per_Scenario: 4,
+    Learner_Level: 'Advanced',
+    special_instruction: 'Include realistic clinical situations.',
+    Focus_Area: '',
+    BASE_CONTENT: '',
   });
-  const [showModal, setShowModal] = useState(false);
-  const [questionCategory, setQuestionCategory] = useState(null);
+  const [showModal, setShowModal] = useState(false); // Modal hidden on load
+  const [questionCategory, setQuestionCategory] = useState('simple'); // Default to simple questions
   const [trigger, setTrigger] = useState(0);
-  const [showFileInput, setShowFileInput] = useState(false);
+  const [showFileInput, setShowFileInput] = useState(false); // File input hidden by default
   const [simpleQuestionType, setSimpleQuestionType] = useState('multiple-choice');
   const [scenarioLearnerLevel, setScenarioLearnerLevel] = useState('Advanced');
   const [isLoading, setIsLoading] = useState(false);
   const fileRef = useRef(null);
 
-  // Function to derive Focus_Area and tags from extracted text
+  // Function to derive Focus_Area and tags from text (file or form input)
   const deriveFocusArea = (text) => {
+    if (!text || typeof text !== 'string') return 'General';
     const stopwords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'];
     const words = text.toLowerCase().match(/\b\w+\b/g) || [];
     const freq = {};
@@ -66,7 +72,6 @@ const App = () => {
         const page = await pdf.getPage(i);
         const text = await page.getTextContent();
         const pageText = text.items.map(item => item.str).join(' ');
-        console.log(`Page ${i} text:`, pageText);
         textContent += pageText + '\n';
       }
       if (!textContent.trim()) {
@@ -76,9 +81,6 @@ const App = () => {
       return textContent;
     } catch (error) {
       console.error('PDF text extraction error:', error);
-      if (error.message && error.message.includes('worker')) {
-        return 'Error: Failed to load PDF worker script. Ensure the worker script is correctly configured.';
-      }
       return `Error: Unable to extract text from PDF - ${error.message || error}`;
     }
   }
@@ -132,10 +134,9 @@ const App = () => {
       setShowModal(true);
       return;
     }
-    if (!file && !questionCategory) {
-      setShowFileInput(true);
-      return;
-    }
+
+    let extractedText = formData.base_content || formData.BASE_CONTENT || 'Animals require a balanced diet for optimal health. Nutritional needs vary by species, age, activity level, and health condition.';
+
     if (file) {
       const validFileTypes = [
         'application/pdf',
@@ -148,7 +149,6 @@ const App = () => {
       }
       setIsLoading(true);
       try {
-        let extractedText;
         if (file.type === 'application/pdf') {
           extractedText = await extractPdfText(file);
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
@@ -166,72 +166,77 @@ const App = () => {
           setIsLoading(false);
           return;
         }
-        const derivedFocus = deriveFocusArea(extractedText);
-        const defaultParams = isCaseBased ? {
-          subject: derivedFocus.split(', ')[0] || 'Animal Nutrition',
-          tags: derivedFocus.split(', ').filter(Boolean),
-          topic: derivedFocus,
-          question_type: 'Case-based MCQ',
-          questionType: 'case-based',
-          max_question: formData.Scenarios * formData.numQuestions || 8,
-          numQuestions: formData.numQuestions || 5,
-          blooms_taxonomy: 'Apply',
-          difficulty_level: 'Hard',
-          learning_objective: 'Understand nutritional requirements in clinical scenarios',
-          grade: 'Advanced',
-          BASE_CONTENT: extractedText,
-          difficulty: { easy: false, medium: false, hard: true },
-          description: 'Include realistic clinical situations',
-          bloomsTaxonomy: 'Apply',
-          title: '',
-          totalMarks: '',
-          totalTime: '',
-          Scenarios: formData.Scenarios || 2,
-          Questions_per_Scenario: formData.numQuestions || 4,
-          Learner_Level: 'Advanced',
-          special_instruction: 'Include realistic clinical situations.',
-          Focus_Area: derivedFocus,
-        } : {
-          subject: derivedFocus.split(', ')[0] || 'Mathematics',
-          tags: derivedFocus.split(', ').filter(Boolean),
-          topic: derivedFocus,
-          question_type: simpleQuestionType,
-          questionType: simpleQuestionType,
-          max_question: 6,
-          numQuestions: 6,
-          blooms_taxonomy: 'Apply',
-          difficulty_level: 'Medium',
-          learning_objective: 'Hands on practice',
-          grade: '7',
-          base_content: extractedText,
-          difficulty: { easy: false, medium: true, hard: false },
-          description: 'Hands on practice',
-          bloomsTaxonomy: 'Applying',
-          title: '',
-          totalMarks: '',
-          totalTime: '',
-        };
-        console.log('Setting formData with extracted content:', defaultParams);
-        setFormData(defaultParams);
-        setTrigger(Date.now());
-      } finally {
+      } catch (error) {
+        alert(`Error processing file: ${error.message}`);
         setIsLoading(false);
+        return;
       }
     }
+
+    const derivedFocus = deriveFocusArea(extractedText);
+    const defaultParams = isCaseBased ? {
+      subject: derivedFocus.split(', ')[0] || 'Animal Nutrition',
+      tags: derivedFocus.split(', ').filter(Boolean),
+      topic: derivedFocus,
+      question_type: 'Case-based MCQ',
+      questionType: 'case-based',
+      max_question: formData.Scenarios * formData.numQuestions || 8,
+      numQuestions: formData.numQuestions || 4,
+      blooms_taxonomy: 'Apply',
+      difficulty_level: 'Hard',
+      learning_objective: 'Understand nutritional requirements in clinical scenarios',
+      grade: 'Advanced',
+      BASE_CONTENT: extractedText,
+      difficulty: { easy: false, medium: false, hard: true },
+      description: 'Include realistic clinical situations',
+      bloomsTaxonomy: 'Apply',
+      title: '',
+      totalMarks: '',
+      totalTime: '',
+      Scenarios: formData.Scenarios || 1,
+      Questions_per_Scenario: formData.numQuestions || 4,
+      Learner_Level: 'Advanced',
+      special_instruction: 'Include realistic clinical situations.',
+      Focus_Area: derivedFocus,
+    } : {
+      subject: derivedFocus.split(', ')[0] || 'Mathematics',
+      tags: derivedFocus.split(', ').filter(Boolean),
+      topic: derivedFocus,
+      question_type: simpleQuestionType,
+      questionType: simpleQuestionType,
+      max_question: 6,
+      numQuestions: 6,
+      blooms_taxonomy: 'Apply',
+      difficulty_level: 'Medium',
+      learning_objective: 'Hands on practice',
+      grade: '7',
+      base_content: extractedText,
+      difficulty: { easy: false, medium: true, hard: false },
+      description: 'Hands on practice',
+      bloomsTaxonomy: 'Applying',
+      title: '',
+      totalMarks: '',
+      totalTime: '',
+    };
+
+    console.log('Setting formData with content:', defaultParams);
+    setFormData(defaultParams);
+    setTrigger(Date.now());
+    setIsLoading(false);
+    setShowFileInput(true); // Show file input after upload
   };
 
   const handleModalSelect = (category) => {
-    const extractedContent = formData.base_content || formData.BASE_CONTENT || '';
-    const derivedFocus = extractedContent ? deriveFocusArea(extractedContent) : (category === 'scenario-based' ? 'Animal Nutrition' : 'General');
+    const extractedContent = formData.base_content || formData.BASE_CONTENT || 'Animals require a balanced diet for optimal health. Nutritional needs vary by species, age, activity level, and health condition.';
+    const derivedFocus = deriveFocusArea(extractedContent);
     const newFormData = {
       ...formData,
       questionType: category === 'scenario-based' ? 'case-based' : simpleQuestionType,
       Question_Style: category === 'scenario-based' ? 'Case-based MCQ' : simpleQuestionType,
-      Scenarios: formData.Scenarios || (category === 'scenario-based' ? 1 : undefined),
-      Questions_per_Scenario: formData.numQuestions || (category === 'scenario-based' ? 4 : undefined),
+      Scenarios: category === 'scenario-based' ? (formData.Scenarios || 1) : undefined,
+      Questions_per_Scenario: category === 'scenario-based' ? (formData.numQuestions || 4) : undefined,
       Learner_Level: category === 'scenario-based' ? scenarioLearnerLevel : undefined,
-      special_instruction:
-        category === 'scenario-based' ? 'Include realistic clinical situations.' : undefined,
+      special_instruction: category === 'scenario-based' ? 'Include realistic clinical situations.' : undefined,
       max_question: category === 'scenario-based' ? (formData.Scenarios || 1) * (formData.numQuestions || 4) : 6,
       numQuestions: formData.numQuestions || (category === 'scenario-based' ? 4 : 6),
       subject: category === 'scenario-based' ? (derivedFocus.split(', ')[0] || 'Animal Nutrition') : (derivedFocus.split(', ')[0] || 'Mathematics'),
@@ -239,14 +244,8 @@ const App = () => {
       topic: derivedFocus,
       tags: derivedFocus.split(', ').filter(Boolean),
       difficulty_level: category === 'scenario-based' ? 'Hard' : 'Medium',
-      difficulty:
-        category === 'scenario-based'
-          ? { hard: true, easy: false, medium: false }
-          : { easy: false, medium: true, hard: false },
-      learning_objective:
-        category === 'scenario-based'
-          ? 'Understand nutritional requirements...'
-          : 'Hands on practice',
+      difficulty: category === 'scenario-based' ? { hard: true, easy: false, medium: false } : { easy: false, medium: true, hard: false },
+      learning_objective: category === 'scenario-based' ? 'Understand nutritional requirements in clinical scenarios' : 'Hands on practice',
       BASE_CONTENT: category === 'scenario-based' ? extractedContent : '',
       base_content: category !== 'scenario-based' ? extractedContent : '',
     };
@@ -254,15 +253,26 @@ const App = () => {
     setFormData(newFormData);
     setQuestionCategory(category);
     setShowModal(false);
+    setShowFileInput(true); // Show file input after selecting question type
+    setTrigger(Date.now()); // Trigger question generation
+  };
+
+  // Function to trigger modal manually (e.g., from Navbar)
+  const handleShowModal = () => {
+    setShowModal(true);
+  };
+
+  // Function to toggle file input visibility
+  const handleToggleFileInput = () => {
     setShowFileInput(true);
   };
 
   return (
     <>
-      <Navbar onFileUpload={handleFileUpload} />
+      <Navbar onFileUpload={handleFileUpload} onShowModal={handleShowModal} onToggleFileInput={handleToggleFileInput} />
       {isLoading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="text-white text-lg">Loading file...</div>
+          <div className="text-white text-lg">Loading...</div>
         </div>
       )}
       {showModal && (

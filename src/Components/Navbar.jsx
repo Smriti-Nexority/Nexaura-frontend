@@ -5,7 +5,7 @@ import profile from './Components_assets/img.jpg';
 import chart from './Components_assets/chart-bar-line.svg';
 import file from './Components_assets/file-02.svg';
 
-const Navbar = ({ onFileUpload }) => {
+const Navbar = ({ onFileUpload, onShowModal, onToggleFileInput }) => {
   const [isChecked, setIsChecked] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -17,8 +17,8 @@ const Navbar = ({ onFileUpload }) => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handleUploadClick = () => {
-    onFileUpload(null, false, isChecked, true);
+  const handleShowUpload = () => {
+    onToggleFileInput(); // Show file input section in AssessmentForm
   };
 
   return (
@@ -47,14 +47,14 @@ const Navbar = ({ onFileUpload }) => {
                 />
                 Subject
               </div>
-             
               <button
-                onClick={handleUploadClick}
-                className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer upload-button"
+                onClick={onShowModal}
+                className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer"
               >
-                <img src={file} alt="upload" />
+                <img src={file} alt="question-type" />
                 Upload
               </button>
+              
             </div>
           </div>
           <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
@@ -98,13 +98,16 @@ const Navbar = ({ onFileUpload }) => {
                 />
                 Subject
               </div>
-              <div className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer">
-                <img src={chart} alt="subject" />
-                Text
-              </div>
               <button
-                onClick={handleUploadClick}
-                className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer bg-[#2F2F2F]"
+                onClick={onShowModal}
+                className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer"
+              >
+                <img src={chart} alt="question-type" />
+                Change Question Type
+              </button>
+              <button
+                onClick={handleShowUpload}
+                className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer bg-[#2F2F2F] upload-button"
               >
                 <img src={file} alt="upload" />
                 Upload
@@ -131,6 +134,16 @@ const Navbar = ({ onFileUpload }) => {
             </div>
           </div>
         )}
+        <input
+          type="file"
+          onChange={(e) => {
+            onToggleFileInput(); // Show file input in form
+            onFileUpload(e.target.files[0], false, isChecked, false);
+          }}
+          accept=".pdf,.docx,.pptx"
+          className="hidden"
+          id="file-upload"
+        />
       </div>
     </nav>
   );
