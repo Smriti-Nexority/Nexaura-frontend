@@ -51,7 +51,7 @@ const Navbar = ({ onFileUpload, onShowModal, onToggleFileInput, onSubjectCheckbo
               </div>
               <button
                 onClick={onShowModal}
-                className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer"
+                className="text-[#848484] font-medium flex items-center gap-2 hover:text-white transition-colors cursor-pointer upload-button"
               >
                 <img src={file} alt="question-type" />
                 Upload
