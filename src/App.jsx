@@ -6,7 +6,7 @@ import JSZip from 'jszip';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
-import Sidebar from './Components/Sidebar';
+import Sidebar from './Components/sidebar';
 import Navbar from './Components/Navbar';
 import AssessmentDashboard from './Components/AssessmentDashboard';
 
