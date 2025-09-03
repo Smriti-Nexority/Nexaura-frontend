@@ -81,7 +81,7 @@ const Navbar = ({ onFileUpload, onShowModal, onToggleFileInput, onSubjectCheckbo
           </div>
           <button
             onClick={toggleMobileMenu}
-            className="lg:hidden p-2 rounded-md hover:bg-[#404040] transition-colors"
+            className="lg:hidden p-2 rounded-md hover:bg-[#404040] transition-colors upload-button"
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
